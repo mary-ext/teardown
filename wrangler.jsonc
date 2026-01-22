@@ -1,0 +1,9 @@
+{
+	"$schema": "https://unpkg.com/wrangler@latest/config-schema.json",
+	"name": "teardown",
+	"compatibility_date": "2026-01-20",
+	"assets": {
+		"directory": "dist",
+		"not_found_handling": "single-page-application",
+	},
+}
