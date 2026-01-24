@@ -27,7 +27,7 @@ export const RECOMMENDATIONS: (string | string[])[] = [
 	'pinia',
 	['redux', 'react-redux'],
 	'valtio',
-	['@xstate/react', '@xstate/solid', '@xstate/svelte', '@xstate/vue'],
+	['@xstate/react', '@xstate/solid', '@xstate/vue'],
 	'zustand',
 
 	// standalone reactivity
@@ -38,13 +38,7 @@ export const RECOMMENDATIONS: (string | string[])[] = [
 	// data fetching
 	'@apollo/client',
 	'graphql-request',
-	[
-		'@tanstack/angular-query',
-		'@tanstack/react-query',
-		'@tanstack/solid-query',
-		'@tanstack/svelte-query',
-		'@tanstack/vue-query',
-	],
+	['@tanstack/angular-query', '@tanstack/react-query', '@tanstack/solid-query', '@tanstack/vue-query'],
 	['@trpc/client', '@trpc/react-query'],
 	'swr',
 	'urql',
@@ -153,20 +147,12 @@ export const RECOMMENDATIONS: (string | string[])[] = [
 	// forms
 	['final-form', 'react-final-form'],
 	'react-hook-form',
-	[
-		'@formisch/preact',
-		'@formisch/qwik',
-		'@formisch/react',
-		'@formisch/solid',
-		'@formisch/svelte',
-		'@formisch/vue',
-	],
+	['@formisch/preact', '@formisch/qwik', '@formisch/react', '@formisch/solid', '@formisch/vue'],
 	[
 		'@tanstack/angular-form',
 		'@tanstack/lit-form',
 		'@tanstack/react-form',
 		'@tanstack/solid-form',
-		'@tanstack/svelte-form',
 		'@tanstack/vue-form',
 	],
 
@@ -177,7 +163,6 @@ export const RECOMMENDATIONS: (string | string[])[] = [
 		'@tanstack/qwik-table',
 		'@tanstack/react-table',
 		'@tanstack/solid-table',
-		'@tanstack/svelte-table',
 		'@tanstack/vue-table',
 	],
 
@@ -189,7 +174,6 @@ export const RECOMMENDATIONS: (string | string[])[] = [
 		'@tanstack/lit-virtual',
 		'@tanstack/react-virtual',
 		'@tanstack/solid-virtual',
-		'@tanstack/svelte-virtual',
 		'@tanstack/vue-virtual',
 	],
 
