@@ -257,7 +257,7 @@ const PackageBundle = (props: PackageBundleProps) => {
 														return (
 															<button
 																onClick={() => toggleExport(exp)}
-																class="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-base-300 transition duration-100"
+																class="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-base-300 transition duration-100 select-none"
 																classList={{
 																	'border-brand-stroke-1 bg-brand-background-2 text-brand-foreground-2 hover:bg-brand-background-2-hover hover:text-brand-foreground-2-hover active:bg-brand-background-2-pressed active:text-brand-foreground-2-pressed':
 																		selected(),
