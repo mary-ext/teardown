@@ -76,6 +76,7 @@ const bundleResultSchema = v.object({
 	gzipSize: v.number(),
 	brotliSize: v.optional(v.number()),
 	exports: v.array(v.string()),
+	isCjs: v.boolean(),
 });
 
 // #endregion

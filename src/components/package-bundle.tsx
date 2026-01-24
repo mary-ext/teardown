@@ -1,6 +1,6 @@
 import { createSignal, For, Match, onCleanup, Show, Switch } from 'solid-js';
 
-import { LucideCheck, LucideCircleAlert, LucideLoader } from '../icons/lucide';
+import { LucideCheck, LucideCircleAlert, LucideInfo, LucideLoader } from '../icons/lucide';
 import { formatBytes } from '../lib/format';
 import { LRUCache } from '../lib/lru';
 import { createQuery } from '../lib/query';
@@ -219,54 +219,69 @@ const PackageBundle = (props: PackageBundleProps) => {
 								</Show>
 							</div>
 
-							{/* export selection */}
-							<Show when={initialBundle()?.exports} keyed>
-								{(allExports) => (
-									<div class="flex flex-col gap-3">
-										<div class="flex items-center justify-between">
-											<span class="text-base-300 font-medium text-neutral-foreground-2">
-												Exports ({allExports.length})
-											</span>
-											<div class="flex gap-1">
-												<Button appearance="subtle" size="small" onClick={selectAll}>
-													All
-												</Button>
-												<Button appearance="subtle" size="small" onClick={selectNone}>
-													None
-												</Button>
+							<Switch>
+								<Match when={bundleData().isCjs}>
+									<div class="flex items-center gap-2 text-base-200 text-neutral-foreground-3">
+										<LucideInfo class="size-4" />
+										<span>CommonJS module — tree-shaking unavailable</span>
+									</div>
+								</Match>
+
+								<Match when={!initialBundle()?.exports.length}>
+									<div class="flex items-center gap-2 text-base-200 text-neutral-foreground-3">
+										<LucideInfo class="size-4" />
+										<span>No exports detected — side-effects only module</span>
+									</div>
+								</Match>
+
+								<Match when={initialBundle()?.exports}>
+									{(allExports) => (
+										<div class="flex flex-col gap-3">
+											<div class="flex items-center justify-between">
+												<span class="text-base-300 font-medium text-neutral-foreground-2">
+													Exports ({allExports().length})
+												</span>
+												<div class="flex gap-1">
+													<Button appearance="subtle" size="small" onClick={selectAll}>
+														All
+													</Button>
+													<Button appearance="subtle" size="small" onClick={selectNone}>
+														None
+													</Button>
+												</div>
+											</div>
+											<div class="flex flex-wrap gap-1.5">
+												<For each={allExports()}>
+													{(exp) => {
+														const selected = () => isExportSelected(exp);
+														return (
+															<button
+																onClick={() => toggleExport(exp)}
+																class="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-base-300 transition duration-100"
+																classList={{
+																	'border-brand-stroke-1 bg-brand-background-2 text-brand-foreground-2 hover:bg-brand-background-2-hover hover:text-brand-foreground-2-hover active:bg-brand-background-2-pressed active:text-brand-foreground-2-pressed':
+																		selected(),
+																	'border-neutral-stroke-1 bg-neutral-background-1 text-neutral-foreground-2 hover:bg-neutral-background-1-hover hover:text-neutral-foreground-2-hover active:bg-neutral-background-1-pressed active:text-neutral-foreground-2-pressed':
+																		!selected(),
+																}}
+															>
+																<LucideCheck
+																	class="duration-fast size-3.5 transition"
+																	classList={{
+																		'opacity-100': selected(),
+																		'opacity-0': !selected(),
+																	}}
+																/>
+																<span>{exp}</span>
+															</button>
+														);
+													}}
+												</For>
 											</div>
 										</div>
-										<div class="flex flex-wrap gap-1.5">
-											<For each={allExports}>
-												{(exp) => {
-													const selected = () => isExportSelected(exp);
-													return (
-														<button
-															onClick={() => toggleExport(exp)}
-															class="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-base-300 transition duration-100"
-															classList={{
-																'border-brand-stroke-1 bg-brand-background-2 text-brand-foreground-2 hover:bg-brand-background-2-hover hover:text-brand-foreground-2-hover active:bg-brand-background-2-pressed active:text-brand-foreground-2-pressed':
-																	selected(),
-																'border-neutral-stroke-1 bg-neutral-background-1 text-neutral-foreground-2 hover:bg-neutral-background-1-hover hover:text-neutral-foreground-2-hover active:bg-neutral-background-1-pressed active:text-neutral-foreground-2-pressed':
-																	!selected(),
-															}}
-														>
-															<LucideCheck
-																class="duration-fast size-3.5 transition"
-																classList={{
-																	'opacity-100': selected(),
-																	'opacity-0': !selected(),
-																}}
-															/>
-															<span>{exp}</span>
-														</button>
-													);
-												}}
-											</For>
-										</div>
-									</div>
-								)}
-							</Show>
+									)}
+								</Match>
+							</Switch>
 						</div>
 					)}
 				</Match>

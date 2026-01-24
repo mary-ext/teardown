@@ -107,6 +107,17 @@ export function LucideHardDrive(props: JSX.IntrinsicElements['svg']) {
 	);
 }
 
+export function LucideInfo(props: JSX.IntrinsicElements['svg']) {
+	return (
+		<svg width="1em" height="1em" viewBox="0 0 24 24" {...props}>
+			<g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+				<circle cx="12" cy="12" r="10" />
+				<path d="M12 16v-4m0-4h.01" />
+			</g>
+		</svg>
+	);
+}
+
 export function LucideLoader(props: JSX.IntrinsicElements['svg']) {
 	return (
 		<svg width="1em" height="1em" viewBox="0 0 24 24" {...props}>

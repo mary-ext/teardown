@@ -4,6 +4,7 @@ import { memfs } from '@rolldown/browser/experimental';
 
 import { BundleError } from './errors';
 import { progress } from './events';
+import { analyzeModule } from './module-type';
 
 const { volume } = memfs!;
 
@@ -56,6 +57,8 @@ export interface BundleResult {
 	brotliSize?: number;
 	/** exported names from the entry chunk */
 	exports: string[];
+	/** whether the entry module is CommonJS */
+	isCjs: boolean;
 }
 
 // #endregion
@@ -63,38 +66,6 @@ export interface BundleResult {
 // #region helpers
 
 const VIRTUAL_ENTRY_ID = '\0virtual:entry';
-
-/**
- * creates a virtual entry point that imports and re-exports from a specific subpath.
- *
- * @param packageName the package name
- * @param subpath the export subpath (e.g., ".", "./utils")
- * @param selectedExports list of specific exports to include, or null for all
- * @param includeDefault whether to include default export (only used when selectedExports is null)
- * @returns the entry point code
- */
-function createVirtualEntry(
-	packageName: string,
-	subpath: string,
-	selectedExports: string[] | null,
-	includeDefault: boolean,
-): string {
-	const importPath = subpath === '.' ? packageName : `${packageName}${subpath.slice(1)}`;
-
-	if (selectedExports === null) {
-		// re-export everything
-		let code = `export * from '${importPath}';\n`;
-		if (includeDefault) {
-			code += `export { default } from '${importPath}';\n`;
-		}
-		return code;
-	}
-
-	// specific exports selected (empty array = export nothing)
-	// quote names to handle non-identifier exports
-	const quoted = selectedExports.map((e) => JSON.stringify(e));
-	return `export { ${quoted.join(', ')} } from '${importPath}';\n`;
-}
 
 /**
  * get compressed size using a compression stream.
@@ -176,6 +147,9 @@ export async function bundlePackage(
 	selectedExports: string[] | null,
 	options: BundleOptions,
 ): Promise<BundleResult> {
+	// track whether module is CJS (set in load hook)
+	let isCjs = false;
+
 	// bundle with rolldown
 	const bundle = await rolldown({
 		input: { main: VIRTUAL_ENTRY_ID },
@@ -194,48 +168,62 @@ export async function bundlePackage(
 						return;
 					}
 
-					// check if the module has a default export
-					let includeDefault = false;
-					if (selectedExports === null) {
-						const importPath = subpath === '.' ? packageName : `${packageName}${subpath.slice(1)}`;
-						const resolved = await this.resolve(importPath);
+					const importPath = subpath === '.' ? packageName : `${packageName}${subpath.slice(1)}`;
 
-						if (resolved) {
-							try {
-								const source = volume.readFileSync(resolved.id, 'utf8') as string;
-								const ast = this.parse(source);
-
-								for (const node of ast.body) {
-									// export default ...
-									if (node.type === 'ExportDefaultDeclaration') {
-										includeDefault = true;
-										break;
-									}
-
-									// export { default } from '...' or export { foo as default }
-									if (node.type === 'ExportNamedDeclaration') {
-										for (const spec of node.specifiers) {
-											const exported = spec.exported;
-											const name = exported.type === 'Literal' ? exported.value : exported.name;
-
-											if (name === 'default') {
-												includeDefault = true;
-												break;
-											}
-										}
-
-										if (includeDefault) {
-											break;
-										}
-									}
-								}
-							} catch {
-								// couldn't read/parse file, skip default export
-							}
-						}
+					// resolve the entry module
+					const resolved = await this.resolve(importPath);
+					if (!resolved) {
+						throw new BundleError(`failed to resolve entry module: ${importPath}`);
 					}
 
-					return createVirtualEntry(packageName, subpath, selectedExports, includeDefault);
+					// JSON files only have a default export
+					if (resolved.id.endsWith('.json')) {
+						return `export { default } from '${importPath}';\n`;
+					}
+
+					// read the source file
+					let source: string;
+					try {
+						source = volume.readFileSync(resolved.id, 'utf8') as string;
+					} catch {
+						throw new BundleError(`failed to read entry module: ${resolved.id}`);
+					}
+
+					// parse and analyze the module
+					let ast;
+					try {
+						ast = this.parse(source);
+					} catch {
+						throw new BundleError(`failed to parse entry module: ${resolved.id}`);
+					}
+
+					const moduleInfo = analyzeModule(ast);
+					isCjs = moduleInfo.type === 'cjs';
+
+					// CJS modules can't be tree-shaken effectively, just re-export default
+					if (moduleInfo.type === 'cjs') {
+						return `export { default } from '${importPath}';\n`;
+					}
+
+					// unknown/side-effects only modules have no exports
+					if (moduleInfo.type === 'unknown') {
+						return `export {} from '${importPath}';\n`;
+					}
+
+					// ESM module handling
+					if (selectedExports === null) {
+						// re-export everything
+						let code = `export * from '${importPath}';\n`;
+						if (moduleInfo.hasDefaultExport) {
+							code += `export { default } from '${importPath}';\n`;
+						}
+						return code;
+					}
+
+					// specific exports selected (empty array = export nothing)
+					// quote names to handle non-identifier exports
+					const quoted = selectedExports.map((e) => JSON.stringify(e));
+					return `export { ${quoted.join(', ')} } from '${importPath}';\n`;
 				},
 			},
 		],
@@ -288,6 +276,7 @@ export async function bundlePackage(
 		gzipSize: totalGzipSize,
 		brotliSize: totalBrotliSize,
 		exports: entryChunk.exports,
+		isCjs,
 	};
 }
 
