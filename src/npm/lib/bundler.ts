@@ -8,8 +8,6 @@ import type { BundleChunk, BundleOptions, BundleResult } from '../types';
 import { BundleError } from './errors';
 import { analyzeModule } from './module-type';
 
-export type { BundleChunk, BundleOptions, BundleResult };
-
 const { volume } = memfs!;
 
 // #region helpers
@@ -40,7 +38,7 @@ async function getCompressedSize(code: string, format: CompressionFormat): Promi
 /**
  * get gzip size using compression stream.
  */
-async function getGzipSize(code: string): Promise<number> {
+function getGzipSize(code: string): Promise<number> {
 	return getCompressedSize(code, 'gzip');
 }
 
@@ -50,13 +48,13 @@ async function getGzipSize(code: string): Promise<number> {
  * - `true`: supported
  * - `false`: not supported
  */
-export let isBrotliSupported: boolean | undefined;
+let isBrotliSupported: boolean | undefined;
 
 /**
  * get brotli size using compression stream, if supported.
  * returns `undefined` if brotli is not supported by the browser.
  */
-export async function getBrotliSize(code: string): Promise<number | undefined> {
+async function getBrotliSize(code: string): Promise<number | undefined> {
 	if (isBrotliSupported === false) {
 		return undefined;
 	}
@@ -85,13 +83,13 @@ export async function getBrotliSize(code: string): Promise<number | undefined> {
  * - `true`: supported
  * - `false`: not supported
  */
-export let isZstdSupported: boolean | undefined;
+let isZstdSupported: boolean | undefined;
 
 /**
  * get zstd size using compression stream, if supported.
  * returns `undefined` if zstd is not supported by the browser.
  */
-export async function getZstdSize(code: string): Promise<number | undefined> {
+async function getZstdSize(code: string): Promise<number | undefined> {
 	if (isZstdSupported === false) {
 		return undefined;
 	}
