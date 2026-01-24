@@ -63,18 +63,20 @@ export async function getBrotliSize(code: string): Promise<number | undefined> {
 
 	if (isBrotliSupported === undefined) {
 		try {
-			// @ts-expect-error 'br' is not in the type definition yet
-			const size = await getCompressedSize(code, 'br');
+			// @ts-expect-error 'brotli' is not in the type definition yet
+			const size = await getCompressedSize(code, 'brotli');
+			console.log(`[worker] brotli supported`);
 			isBrotliSupported = true;
 			return size;
 		} catch {
+			console.log(`[worker] brotli not supported`);
 			isBrotliSupported = false;
 			return undefined;
 		}
 	}
 
-	// @ts-expect-error 'br' is not in the type definition yet
-	return getCompressedSize(code, 'br');
+	// @ts-expect-error 'brotli' is not in the type definition yet
+	return getCompressedSize(code, 'brotli');
 }
 
 // #endregion
