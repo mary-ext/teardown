@@ -21,7 +21,7 @@ const PackageResult = (props: PackageResultProps) => {
 	const hasSubpaths = result.subpaths.defaultSubpath !== null;
 
 	return (
-		<div class="flex flex-col gap-8">
+		<div class="flex flex-col gap-4">
 			{/* package header */}
 			<div class="flex flex-wrap gap-3">
 				<h2 class="min-w-0 text-base-600 font-bold wrap-break-word text-neutral-foreground-1">
@@ -32,13 +32,17 @@ const PackageResult = (props: PackageResultProps) => {
 			</div>
 
 			{hasPeerDeps && (
-				<Toggle
-					checked={excludePeers()}
-					onChange={(ev) => setExcludePeers(ev.currentTarget.checked)}
-					class="-mx-2"
-				>
-					Exclude peer dependencies
-				</Toggle>
+				<>
+					<Toggle
+						checked={excludePeers()}
+						onChange={(ev) => setExcludePeers(ev.currentTarget.checked)}
+						class="-mx-2"
+					>
+						Exclude peer dependencies
+					</Toggle>
+
+					<hr class="mb-4 border-neutral-stroke-3" />
+				</>
 			)}
 
 			{hasSubpaths && (
@@ -50,7 +54,8 @@ const PackageResult = (props: PackageResultProps) => {
 						excludePeers={excludePeers()}
 						peerDependencies={/* @once */ result.peerDependencies}
 					/>
-					<hr class="border-neutral-stroke-3" />
+
+					<hr class="my-4 border-neutral-stroke-3" />
 				</>
 			)}
 
