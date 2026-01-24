@@ -18,8 +18,8 @@ import { createQuery } from './lib/query';
 import { createDerivedSignal } from './lib/signals';
 import { useSearchParams } from './lib/use-search-params';
 import { progress } from './npm/events';
+import type { ProgressMessage } from './npm/types';
 import { initPackage } from './npm/worker-client';
-import type { ProgressMessage } from './npm/worker-protocol';
 import Button from './primitives/button';
 import Tooltip from './primitives/tooltip';
 

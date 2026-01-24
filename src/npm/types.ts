@@ -1,141 +1,188 @@
-/**
- * the parsed package.json of the main package.
- * includes fields relevant for export discovery and display.
- */
-export interface PackageJson {
-	name: string;
-	version: string;
-	description?: string;
-	license?: string;
-	main?: string;
-	module?: string;
-	browser?: string | Record<string, string | false>;
-	types?: string;
-	typings?: string;
-	exports?: PackageExports;
-	type?: 'module' | 'commonjs';
-	peerDependencies?: Record<string, string>;
-}
+import * as v from 'valibot';
 
-/**
- * package exports field - can be a string, array, object, or nested conditions.
- * https://nodejs.org/api/packages.html#exports
- */
-export type PackageExports = string | string[] | { [key: string]: PackageExports } | null;
+// #region option schemas
 
-/**
- * npm registry packument - the full metadata for a package including all versions.
- * fetched from registry.npmjs.org/{package-name}
- */
-export interface Packument {
-	name: string;
-	'dist-tags': Record<string, string>;
-	versions: Record<string, PackageManifest>;
-	time?: Record<string, string>;
-}
+const resolveOptionsSchema = v.object({
+	installPeers: v.optional(v.boolean()),
+});
 
-/**
- * package manifest for a specific version.
- * this is what you'd find in a package.json plus registry metadata.
- */
-export interface PackageManifest {
-	name: string;
-	version: string;
-	description?: string;
-	license?: string;
-	main?: string;
-	module?: string;
-	exports?: PackageExports;
-	type?: 'module' | 'commonjs';
-	dependencies?: Record<string, string>;
-	devDependencies?: Record<string, string>;
-	peerDependencies?: Record<string, string>;
-	peerDependenciesMeta?: Record<string, { optional?: boolean }>;
-	optionalDependencies?: Record<string, string>;
-	dist: {
-		tarball: string;
-		integrity?: string;
-		shasum?: string;
-		/** total unpacked size in bytes */
-		unpackedSize?: number;
-		/** number of files in the tarball */
-		fileCount?: number;
-	};
-}
+const fetchOptionsSchema = v.object({
+	concurrency: v.optional(v.number()),
+	exclude: v.optional(v.array(v.instance(RegExp))),
+});
 
-/**
- * a resolved package with its dependencies.
- * this is the output of the resolution step before hoisting.
- */
-export interface ResolvedPackage {
-	name: string;
-	version: string;
-	/** the tarball URL for fetching */
-	tarball: string;
-	/** SRI integrity hash if available */
-	integrity?: string;
-	/** unpacked size in bytes (from registry) */
-	unpackedSize?: number;
-	/** package description */
-	description?: string;
-	/** license identifier */
-	license?: string;
-	/** resolved dependencies (name -> ResolvedPackage) */
-	dependencies: Map<string, ResolvedPackage>;
-}
+const initOptionsSchema = v.object({
+	resolve: v.optional(resolveOptionsSchema),
+	fetch: v.optional(fetchOptionsSchema),
+});
 
-/**
- * supported package registries.
- */
-export type Registry = 'npm' | 'jsr';
+export type InitOptions = v.InferOutput<typeof initOptionsSchema>;
 
-/**
- * the input to the resolver - a package specifier.
- * can be just a name (uses latest) or name@version/range.
- */
-export interface PackageSpecifier {
-	name: string;
-	/** version, range, or dist-tag. defaults to 'latest' */
-	range: string;
-	/** which registry to fetch from. defaults to 'npm' */
-	registry: Registry;
-}
+const bundleOptionsSchema = v.object({
+	rolldown: v.optional(
+		v.object({
+			external: v.optional(v.array(v.string())),
+			minify: v.optional(v.boolean()),
+		}),
+	),
+});
 
-/**
- * the full resolution result - a tree of resolved packages.
- */
-export interface ResolutionResult {
-	/** the root package(s) that were requested */
-	roots: ResolvedPackage[];
-	/** all unique packages in the resolution (for deduping) */
-	packages: Map<string, ResolvedPackage>;
-}
+export type BundleOptions = v.InferOutput<typeof bundleOptionsSchema>;
 
-/**
- * a node in the hoisted node_modules structure.
- * represents what should be written to node_modules/{name}
- */
-export interface HoistedNode {
-	name: string;
-	version: string;
-	tarball: string;
-	integrity?: string;
-	/** unpacked size in bytes (from registry) */
-	unpackedSize?: number;
-	/** package description */
-	description?: string;
-	/** license identifier */
-	license?: string;
-	/** number of direct dependencies */
-	dependencyCount: number;
-	/** nested node_modules for this package (when hoisting fails) */
-	nested: Map<string, HoistedNode>;
-}
+// #endregion
 
-/**
- * the result of hoisting - a flat(ish) node_modules structure.
- */
-export interface HoistedResult {
-	/** top-level node_modules entries */
-	root: Map<string, HoistedNode>;
-}
+// #region result schemas
+
+const subpathSchema = v.object({
+	subpath: v.string(),
+	target: v.string(),
+	isWildcard: v.boolean(),
+});
+
+export type Subpath = v.InferOutput<typeof subpathSchema>;
+
+const discoveredSubpathsSchema = v.object({
+	subpaths: v.array(subpathSchema),
+	defaultSubpath: v.nullable(v.string()),
+});
+
+export type DiscoveredSubpaths = v.InferOutput<typeof discoveredSubpathsSchema>;
+
+const packageRefSchema = v.object({
+	name: v.string(),
+	version: v.string(),
+	isPeer: v.boolean(),
+});
+
+export type PackageRef = v.InferOutput<typeof packageRefSchema>;
+
+const installedPackageSchema = v.object({
+	name: v.string(),
+	version: v.string(),
+	size: v.number(),
+	path: v.string(),
+	level: v.number(),
+	dependents: v.array(packageRefSchema),
+	dependencies: v.array(packageRefSchema),
+	description: v.optional(v.string()),
+	license: v.optional(v.string()),
+	isPeer: v.boolean(),
+});
+
+export type InstalledPackage = v.InferOutput<typeof installedPackageSchema>;
+
+const initResultSchema = v.object({
+	name: v.string(),
+	version: v.string(),
+	subpaths: discoveredSubpathsSchema,
+	installSize: v.number(),
+	packages: v.array(installedPackageSchema),
+	peerDependencies: v.array(v.string()),
+});
+
+export type InitResult = v.InferOutput<typeof initResultSchema>;
+
+const bundleChunkSchema = v.object({
+	fileName: v.string(),
+	code: v.string(),
+	size: v.number(),
+	gzipSize: v.number(),
+	brotliSize: v.optional(v.number()),
+	isEntry: v.boolean(),
+	exports: v.array(v.string()),
+});
+
+export type BundleChunk = v.InferOutput<typeof bundleChunkSchema>;
+
+const bundleResultSchema = v.object({
+	chunks: v.array(bundleChunkSchema),
+	size: v.number(),
+	gzipSize: v.number(),
+	brotliSize: v.optional(v.number()),
+	exports: v.array(v.string()),
+	isCjs: v.boolean(),
+});
+
+export type BundleResult = v.InferOutput<typeof bundleResultSchema>;
+
+// #endregion
+
+// #region request schemas (worker parses these)
+
+const initRequestSchema = v.object({
+	id: v.number(),
+	type: v.literal('init'),
+	packageSpec: v.string(),
+	options: v.optional(initOptionsSchema),
+});
+
+const bundleRequestSchema = v.object({
+	id: v.number(),
+	type: v.literal('bundle'),
+	subpath: v.string(),
+	selectedExports: v.nullable(v.array(v.string())),
+	options: v.optional(bundleOptionsSchema),
+});
+
+export const workerRequestSchema = v.variant('type', [initRequestSchema, bundleRequestSchema]);
+
+export type WorkerRequest = v.InferOutput<typeof workerRequestSchema>;
+
+// #endregion
+
+// #region response schemas (main thread parses these)
+
+const initResponseSchema = v.object({
+	id: v.number(),
+	type: v.literal('init'),
+	result: initResultSchema,
+});
+
+const bundleResponseSchema = v.object({
+	id: v.number(),
+	type: v.literal('bundle'),
+	result: bundleResultSchema,
+});
+
+const errorResponseSchema = v.object({
+	id: v.number(),
+	type: v.literal('error'),
+	error: v.string(),
+});
+
+const progressResponseSchema = v.variant('kind', [
+	v.object({
+		type: v.literal('progress'),
+		kind: v.literal('resolve'),
+		name: v.string(),
+		version: v.string(),
+	}),
+	v.object({
+		type: v.literal('progress'),
+		kind: v.literal('fetch'),
+		current: v.number(),
+		total: v.number(),
+		name: v.string(),
+	}),
+	v.object({
+		type: v.literal('progress'),
+		kind: v.literal('bundle'),
+	}),
+	v.object({
+		type: v.literal('progress'),
+		kind: v.literal('compress'),
+	}),
+]);
+
+export type ProgressMessage = v.InferOutput<typeof progressResponseSchema>;
+
+export const workerResponseSchema = v.variant('type', [
+	initResponseSchema,
+	bundleResponseSchema,
+	errorResponseSchema,
+	progressResponseSchema,
+]);
+
+export type WorkerResponse = v.InferOutput<typeof workerResponseSchema>;
+
+// #endregion

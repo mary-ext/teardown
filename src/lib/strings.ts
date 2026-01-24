@@ -3,6 +3,7 @@ export function normalizeWhitespace(input: string): string {
 }
 
 // matches ANSI escape sequences (colors, cursor movement, etc.)
+// oxlint-disable-next-line no-control-regex
 const ANSI_REGEX = /\x1b\[[0-9;]*[a-zA-Z]/g;
 
 /**

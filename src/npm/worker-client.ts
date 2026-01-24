@@ -1,13 +1,14 @@
 import * as v from 'valibot';
 
-import type { BundleOptions, BundleResult } from './bundler';
 import { progress } from './events';
 import {
 	workerResponseSchema,
+	type BundleOptions,
+	type BundleResult,
 	type InitOptions,
 	type InitResult,
 	type WorkerRequest,
-} from './worker-protocol';
+} from './types';
 
 export type { InitResult };
 
@@ -36,7 +37,7 @@ export class BundlerWorker {
 			this.resolveReady = resolve;
 		});
 
-		this.worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
+		this.worker = new Worker(new URL('./lib/worker-entry.ts', import.meta.url), { type: 'module' });
 		this.worker.onmessage = this.handleMessage.bind(this);
 		this.worker.onerror = this.handleError.bind(this);
 	}

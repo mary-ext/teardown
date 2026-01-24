@@ -2,66 +2,15 @@ import { getUtf8Length } from '@atcute/uint8array';
 import { rolldown } from '@rolldown/browser';
 import { memfs } from '@rolldown/browser/experimental';
 
+import { progress } from '../events';
+import type { BundleChunk, BundleOptions, BundleResult } from '../types';
+
 import { BundleError } from './errors';
-import { progress } from './events';
 import { analyzeModule } from './module-type';
 
+export type { BundleChunk, BundleOptions, BundleResult };
+
 const { volume } = memfs!;
-
-// #region types
-
-/**
- * options for bundling.
- */
-export interface BundleOptions {
-	/** additional rolldown options */
-	rolldown?: {
-		/** external packages to exclude from bundle */
-		external?: string[];
-		/** whether to minify */
-		minify?: boolean;
-	};
-}
-
-/**
- * a bundled chunk.
- */
-export interface BundleChunk {
-	/** chunk filename */
-	fileName: string;
-	/** the bundled code */
-	code: string;
-	/** raw size in bytes */
-	size: number;
-	/** gzipped size in bytes */
-	gzipSize: number;
-	/** brotli size in bytes, if supported */
-	brotliSize?: number;
-	/** whether this is the entry chunk */
-	isEntry: boolean;
-	/** exported names from this chunk */
-	exports: string[];
-}
-
-/**
- * result of bundling a package.
- */
-export interface BundleResult {
-	/** all output chunks */
-	chunks: BundleChunk[];
-	/** total raw size in bytes (all chunks) */
-	size: number;
-	/** total gzipped size in bytes (all chunks) */
-	gzipSize: number;
-	/** total brotli size in bytes (all chunks), if supported */
-	brotliSize?: number;
-	/** exported names from the entry chunk */
-	exports: string[];
-	/** whether the entry module is CommonJS */
-	isCjs: boolean;
-}
-
-// #endregion
 
 // #region helpers
 

@@ -1,22 +1,23 @@
 import { memfs } from '@rolldown/browser/experimental';
 import * as v from 'valibot';
 
-import { stripAnsi } from '../lib/strings';
+import { stripAnsi } from '../../lib/strings';
+import { progress } from '../events';
+import {
+	workerRequestSchema,
+	type BundleOptions,
+	type InitOptions,
+	type InitResult,
+	type WorkerResponse,
+} from '../types';
 
-import { bundlePackage, type BundleOptions } from './bundler';
-import { progress } from './events';
+import { bundlePackage } from './bundler';
 import { fetchPackagesToVolume } from './fetch';
 import { hoist } from './hoist';
 import { buildInstalledPackages } from './installed-packages';
 import { resolve } from './resolve';
 import { discoverSubpaths } from './subpaths';
 import type { PackageJson } from './types';
-import {
-	workerRequestSchema,
-	type InitOptions,
-	type InitResult,
-	type WorkerResponse,
-} from './worker-protocol';
 
 const { volume } = memfs!;
 

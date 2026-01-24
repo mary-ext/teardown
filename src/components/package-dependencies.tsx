@@ -3,7 +3,7 @@ import { createMemo, createSignal, For, Show } from 'solid-js';
 import { LucideSearch } from '../icons/lucide';
 import { tw } from '../lib/classes';
 import { formatBytes } from '../lib/format';
-import type { InstalledPackage } from '../npm/worker-protocol';
+import type { InstalledPackage } from '../npm/types';
 import * as Dropdown from '../primitives/dropdown';
 import Input from '../primitives/input';
 import Tooltip from '../primitives/tooltip';

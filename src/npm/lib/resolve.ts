@@ -1,7 +1,8 @@
 import * as semver from 'semver';
 
+import { progress } from '../events';
+
 import { InvalidSpecifierError, NoMatchingVersionError } from './errors';
-import { progress } from './events';
 import { fetchPackument, reverseJsrName } from './registry';
 import type { PackageManifest, PackageSpecifier, Registry, ResolvedPackage, ResolutionResult } from './types';
 

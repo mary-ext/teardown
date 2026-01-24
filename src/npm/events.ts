@@ -1,6 +1,6 @@
 import { createEventEmitter } from '../lib/emitter';
 
-import type { ProgressMessage } from './worker-protocol';
+import type { ProgressMessage } from './types';
 
 /**
  * emitted during package initialization and bundling.

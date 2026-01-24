@@ -1,8 +1,9 @@
 import { untar } from '@mary/tar';
 import type { Volume } from 'memfs';
 
+import { progress } from '../events';
+
 import { FetchError } from './errors';
-import { progress } from './events';
 import type { HoistedNode, HoistedResult } from './types';
 
 /**

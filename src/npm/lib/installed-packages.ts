@@ -1,14 +1,6 @@
-import type { ResolvedPackage } from './types';
-import type { InstalledPackage } from './worker-protocol';
+import type { InstalledPackage, PackageRef } from '../types';
 
-/**
- * reference to a package in a dependency relationship.
- */
-interface PackageRef {
-	name: string;
-	version: string;
-	isPeer: boolean;
-}
+import type { ResolvedPackage } from './types';
 
 /**
  * builds the installed packages list from the resolved dependency tree.

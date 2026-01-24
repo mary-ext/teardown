@@ -1,32 +1,10 @@
 import type { Volume } from 'memfs';
 
+import type { DiscoveredSubpaths, Subpath } from '../types';
+
 import type { PackageExports, PackageJson } from './types';
 
-// #region types
-
-/**
- * a discovered subpath entry from package.json exports.
- */
-export interface Subpath {
-	/** the subpath pattern (e.g., ".", "./utils", "./feature/*") */
-	subpath: string;
-	/** the resolved file path relative to package root */
-	target: string;
-	/** whether this is a wildcard-expanded entry */
-	isWildcard: boolean;
-}
-
-/**
- * result of discovering package subpaths.
- */
-export interface DiscoveredSubpaths {
-	/** all available subpaths */
-	subpaths: Subpath[];
-	/** the default subpath to select (usually ".") */
-	defaultSubpath: string | null;
-}
-
-// #endregion
+export type { DiscoveredSubpaths, Subpath };
 
 // #region condition resolution
 
