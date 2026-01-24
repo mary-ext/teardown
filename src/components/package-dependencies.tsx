@@ -60,6 +60,15 @@ const SEGMENT_COLORS = [
 
 // #region size breakdown bar
 
+/** derives a consistent color index from a package name */
+function getColorIndex(name: string): number {
+	let hash = 0;
+	for (let i = 0; i < name.length; i++) {
+		hash = (hash * 31 + name.charCodeAt(i)) | 0;
+	}
+	return Math.abs(hash) % SEGMENT_COLORS.length;
+}
+
 interface SizeBreakdownBarProps {
 	packages: InstalledPackage[];
 	installSize: number;
@@ -69,10 +78,10 @@ const SizeBreakdownBar = (props: SizeBreakdownBarProps) => {
 	const segments = createMemo(() => {
 		// sort by size descending for the bar
 		const sorted = [...props.packages].sort((a, b) => b.size - a.size);
-		return sorted.map((pkg, i) => ({
+		return sorted.map((pkg) => ({
 			pkg,
 			percent: (pkg.size / props.installSize) * 100,
-			color: SEGMENT_COLORS[i % SEGMENT_COLORS.length],
+			color: SEGMENT_COLORS[getColorIndex(pkg.name)],
 		}));
 	});
 
