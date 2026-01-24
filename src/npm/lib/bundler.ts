@@ -78,20 +78,56 @@ async function getBrotliSize(code: string): Promise<number | undefined> {
 }
 
 /**
- * whether zstd compression is supported.
+ * whether native zstd compression is supported.
  * - `undefined`: not yet checked
  * - `true`: supported
- * - `false`: not supported
+ * - `false`: not supported (will try WASM fallback)
  */
 let isZstdSupported: boolean | undefined;
 
 /**
- * get zstd size using compression stream, if supported.
- * returns `undefined` if zstd is not supported by the browser.
+ * zstd-wasm module state.
+ * - `undefined`: not yet loaded
+ * - `null`: failed to load
+ * - module: loaded and ready
+ */
+let zstdWasm: typeof import('@bokuweb/zstd-wasm') | null | undefined;
+
+/**
+ * get zstd-compressed size using WASM fallback.
+ * returns `undefined` if WASM failed to load.
+ */
+async function getZstdSizeWasm(code: string): Promise<number | undefined> {
+	if (zstdWasm === null) {
+		return undefined;
+	}
+
+	if (zstdWasm === undefined) {
+		try {
+			zstdWasm = await import('@bokuweb/zstd-wasm');
+			await zstdWasm.init();
+			console.log(`[worker] zstd-wasm initialized`);
+		} catch {
+			console.log(`[worker] zstd-wasm failed to load`);
+			zstdWasm = null;
+			return undefined;
+		}
+	}
+
+	const encoded = new TextEncoder().encode(code);
+	const compressed = zstdWasm.compress(encoded);
+
+	return compressed.byteLength;
+}
+
+/**
+ * get zstd size using compression stream if supported, or WASM fallback.
+ * returns `undefined` if neither native nor WASM is available.
  */
 async function getZstdSize(code: string): Promise<number | undefined> {
+	// use WASM fallback if native is known to be unsupported
 	if (isZstdSupported === false) {
-		return undefined;
+		return getZstdSizeWasm(code);
 	}
 
 	if (isZstdSupported === undefined) {
@@ -102,9 +138,9 @@ async function getZstdSize(code: string): Promise<number | undefined> {
 			isZstdSupported = true;
 			return size;
 		} catch {
-			console.log(`[worker] zstd not supported`);
+			console.log(`[worker] zstd not supported, trying wasm fallback`);
 			isZstdSupported = false;
-			return undefined;
+			return getZstdSizeWasm(code);
 		}
 	}
 
@@ -256,7 +292,8 @@ export async function bundlePackage(
 	const totalSize = chunks.reduce((acc, c) => acc + c.size, 0);
 	const totalGzipSize = chunks.reduce((acc, c) => acc + c.gzipSize, 0);
 	const totalBrotliSize = isBrotliSupported ? chunks.reduce((acc, c) => acc + c.brotliSize!, 0) : undefined;
-	const totalZstdSize = isZstdSupported ? chunks.reduce((acc, c) => acc + c.zstdSize!, 0) : undefined;
+	const totalZstdSize =
+		isZstdSupported || zstdWasm != null ? chunks.reduce((acc, c) => acc + c.zstdSize!, 0) : undefined;
 
 	await bundle.close();
 

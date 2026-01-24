@@ -5,7 +5,7 @@ import solid from 'vite-plugin-solid';
 export default defineConfig({
 	plugins: [tailwindcss(), solid()],
 	optimizeDeps: {
-		exclude: ['@rolldown/browser'],
+		exclude: ['@rolldown/browser', '@bokuweb/zstd-wasm'],
 	},
 	worker: {
 		format: 'es',

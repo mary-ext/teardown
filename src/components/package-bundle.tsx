@@ -2,7 +2,6 @@ import { createSignal, For, Match, onCleanup, Show, Switch } from 'solid-js';
 
 import { LucideCheck, LucideCircleAlert, LucideInfo, LucideLoader } from '../icons/lucide';
 import { LRUCache } from '../lib/lru';
-import SizeStat from './size-stat';
 import { createQuery } from '../lib/query';
 import { createDerivedSignal } from '../lib/signals';
 import { progress } from '../npm/events';
@@ -11,6 +10,8 @@ import type { BundlerWorker } from '../npm/worker-client';
 import Button from '../primitives/button';
 import * as Dropdown from '../primitives/dropdown';
 import * as Field from '../primitives/field';
+
+import SizeStat from './size-stat';
 
 // #region helpers
 
@@ -146,7 +147,13 @@ const PackageBundle = (props: PackageBundleProps) => {
 	return (
 		<div class="flex flex-col gap-5">
 			{/* section header */}
-			<h3 class="text-base-400 font-semibold text-neutral-foreground-1">Bundle size</h3>
+			<div class="flex flex-wrap items-baseline justify-between gap-4">
+				<h3 class="text-base-400 font-semibold text-neutral-foreground-1">Bundle size</h3>
+
+				{bundle.state === 'refreshing' && (
+					<LucideLoader class="size-4 shrink-0 animate-spin-linear text-neutral-foreground-3" />
+				)}
+			</div>
 
 			{/* subpath selector */}
 			<Show when={subpaths.subpaths.length > 1}>
@@ -188,25 +195,16 @@ const PackageBundle = (props: PackageBundleProps) => {
 					{(bundleData) => (
 						<div class="flex flex-col gap-5">
 							{/* size display card */}
-							<div class="flex items-stretch gap-6 rounded-lg border border-neutral-stroke-3 bg-neutral-background-1 p-4">
+							<div class="flex flex-wrap items-stretch gap-8 rounded-lg border border-neutral-stroke-3 bg-neutral-background-1 p-4">
 								<SizeStat label="Minified" size={bundleData().size} />
-								<div class="w-px bg-neutral-stroke-3" />
+
 								<SizeStat label="Gzip" size={bundleData().gzipSize} />
 
-								<Show when={bundleData().brotliSize !== undefined}>
-									<div class="w-px bg-neutral-stroke-3" />
-									<SizeStat label="Brotli" size={bundleData().brotliSize!} />
-								</Show>
+								{bundleData().brotliSize! && <SizeStat label="Brotli" size={bundleData().brotliSize!} />}
 
-								<Show when={bundleData().zstdSize !== undefined}>
-									<div class="w-px bg-neutral-stroke-3" />
+								{bundleData().zstdSize !== undefined && (
 									<SizeStat label="Zstd" size={bundleData().zstdSize!} />
-								</Show>
-								<Show when={bundle.state === 'refreshing'}>
-									<div class="flex items-center">
-										<LucideLoader class="size-5 animate-spin-linear text-neutral-foreground-3" />
-									</div>
-								</Show>
+								)}
 							</div>
 
 							<Switch>
