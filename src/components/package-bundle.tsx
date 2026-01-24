@@ -1,8 +1,8 @@
 import { createSignal, For, Match, onCleanup, Show, Switch } from 'solid-js';
 
 import { LucideCheck, LucideCircleAlert, LucideInfo, LucideLoader } from '../icons/lucide';
-import { formatBytes } from '../lib/format';
 import { LRUCache } from '../lib/lru';
+import SizeStat from './size-stat';
 import { createQuery } from '../lib/query';
 import { createDerivedSignal } from '../lib/signals';
 import { progress } from '../npm/events';
@@ -189,38 +189,18 @@ const PackageBundle = (props: PackageBundleProps) => {
 						<div class="flex flex-col gap-5">
 							{/* size display card */}
 							<div class="flex items-stretch gap-6 rounded-lg border border-neutral-stroke-3 bg-neutral-background-1 p-4">
-								<div class="flex flex-col gap-1">
-									<span class="text-base-300 text-neutral-foreground-3">Minified</span>
-									<span class="text-base-500 font-semibold text-neutral-foreground-1">
-										{formatBytes(bundleData().size)}
-									</span>
-								</div>
+								<SizeStat label="Minified" size={bundleData().size} />
 								<div class="w-px bg-neutral-stroke-3" />
-								<div class="flex flex-col gap-1">
-									<span class="text-base-300 text-neutral-foreground-3">Gzipped</span>
-									<span class="text-base-500 font-semibold text-neutral-foreground-1">
-										{formatBytes(bundleData().gzipSize)}
-									</span>
-								</div>
+								<SizeStat label="Gzip" size={bundleData().gzipSize} />
 
 								<Show when={bundleData().brotliSize !== undefined}>
 									<div class="w-px bg-neutral-stroke-3" />
-									<div class="flex flex-col gap-1">
-										<span class="text-base-300 text-neutral-foreground-3">Brotli</span>
-										<span class="text-base-500 font-semibold text-neutral-foreground-1">
-											{formatBytes(bundleData().brotliSize!)}
-										</span>
-									</div>
+									<SizeStat label="Brotli" size={bundleData().brotliSize!} />
 								</Show>
 
 								<Show when={bundleData().zstdSize !== undefined}>
 									<div class="w-px bg-neutral-stroke-3" />
-									<div class="flex flex-col gap-1">
-										<span class="text-base-300 text-neutral-foreground-3">Zstd</span>
-										<span class="text-base-500 font-semibold text-neutral-foreground-1">
-											{formatBytes(bundleData().zstdSize!)}
-										</span>
-									</div>
+									<SizeStat label="Zstd" size={bundleData().zstdSize!} />
 								</Show>
 								<Show when={bundle.state === 'refreshing'}>
 									<div class="flex items-center">
