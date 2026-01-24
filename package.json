@@ -15,7 +15,7 @@
 		"@atcute/uint8array": "^1.0.6",
 		"@floating-ui/dom": "^1.7.4",
 		"@mary/array-fns": "jsr:^0.1.5",
-		"@mary/tar": "jsr:^0.3.1",
+		"@mary/tar": "jsr:^0.3.2",
 		"@rolldown/browser": "^1.0.0-rc.1",
 		"dequal": "^2.0.3",
 		"memfs": "^4.56.9",

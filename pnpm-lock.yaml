@@ -18,8 +18,8 @@ importers:
         specifier: jsr:^0.1.5
         version: '@jsr/mary__array-fns@0.1.5'
       '@mary/tar':
-        specifier: jsr:^0.3.1
-        version: '@jsr/mary__tar@0.3.1'
+        specifier: jsr:^0.3.2
+        version: '@jsr/mary__tar@0.3.2'
       '@rolldown/browser':
         specifier: ^1.0.0-rc.1
         version: 1.0.0-rc.1
@@ -818,8 +818,8 @@ packages:
   '@jsr/mary__array-fns@0.1.5':
     resolution: {integrity: sha512-gI4scq/Hh9GtFUJfS8cvZf5nr+cs7udvrEpMv75grws5/0LIwBycKeeJcNi4+xNl6x4CGW6Fp46puhtJiQOpMg==, tarball: https://npm.jsr.io/~/11/@jsr/mary__array-fns/0.1.5.tgz}
 
-  '@jsr/mary__tar@0.3.1':
-    resolution: {integrity: sha512-T803kucwCLVOXFJGzVbpkT5vRK6fARy5HL6xMiLK5hJFck72bsAeluENlRnvD0kFPSlFNp/5EJWfTHnpDK0qYA==, tarball: https://npm.jsr.io/~/11/@jsr/mary__tar/0.3.1.tgz}
+  '@jsr/mary__tar@0.3.2':
+    resolution: {integrity: sha512-tGVmuWdOvAmUEWH76m3C+rnXp1VSvZw9WXpNpaJnHabVGpqLAzg9pcRCsN7OBJwZylACEyUiUNQjiHeEu7SD8w==, tarball: https://npm.jsr.io/~/11/@jsr/mary__tar/0.3.2.tgz}
 
   '@napi-rs/wasm-runtime@1.1.1':
     resolution: {integrity: sha512-p64ah1M1ld8xjWv3qbvFwHiFVWrq1yFvV4f7w+mzaqiR4IlSgkqhcRdHwsGgomwzBH51sRY4NEowLxnaBjcW/A==}
@@ -2403,7 +2403,7 @@ snapshots:
 
   '@jsr/mary__array-fns@0.1.5': {}
 
-  '@jsr/mary__tar@0.3.1': {}
+  '@jsr/mary__tar@0.3.2': {}
 
   '@napi-rs/wasm-runtime@1.1.1':
     dependencies:
