@@ -4,6 +4,7 @@ import * as v from 'valibot';
 
 import PackageResult from './components/package-result';
 import PackageSearchInput from './components/package-search-input';
+import { CentralExclamationTriangleSolid } from './icons/central';
 import {
 	LucideArrowDown,
 	LucideCircleAlert,
@@ -204,6 +205,11 @@ const RECOMMENDATIONS: (string | string[])[] = [
 	['@floating-ui/dom', '@floating-ui/react', '@floating-ui/react-dom', '@floating-ui/vue'],
 ];
 
+const isSafari = (() => {
+	const ua = navigator.userAgent;
+	return /AppleWebKit/.test(ua) && !/Chrome|Chromium/.test(ua);
+})();
+
 function App() {
 	const [params, setParams] = useSearchParams({
 		q: v.pipe(v.string(), v.regex(PACKAGE_SPECIFIER_RE)),
@@ -274,6 +280,17 @@ function App() {
 					onChange={setQuery}
 					onSelect={(specifier) => setParams({ q: specifier })}
 				/>
+
+				{isSafari && (
+					<div class="flex gap-2 rounded-md border border-status-warning-border-1 bg-status-warning-background-1 px-3 py-1.75">
+						<CentralExclamationTriangleSolid class="size-5 shrink-0 text-status-warning-foreground-3" />
+
+						<div class="min-w-0 grow text-base-300 text-neutral-foreground-1">
+							<span class="font-semibold">Not compatible with Safari.</span> Sorry, not sure why it doesn't
+							work there. It seems to be Rolldown and WASI related.
+						</div>
+					</div>
+				)}
 
 				<Switch>
 					<Match when={result()} keyed>
