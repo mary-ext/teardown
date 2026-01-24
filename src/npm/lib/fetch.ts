@@ -60,6 +60,9 @@ export const DEFAULT_EXCLUDE_PATTERNS: RegExp[] = [
 
 	// source maps (usually not needed in bundling)
 	/\.map$/,
+
+	// typescript declaration files (not needed for bundling)
+	/\.d\.[cm]?ts$/,
 ];
 
 /**
