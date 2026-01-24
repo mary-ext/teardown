@@ -1,4 +1,4 @@
-import { createSignal, Show } from 'solid-js';
+import { createSignal } from 'solid-js';
 
 import type { PackageSession } from '../npm/worker-client';
 import Toggle from '../primitives/toggle';
