@@ -65,28 +65,6 @@ export interface BundleResult {
 const VIRTUAL_ENTRY_ID = '\0virtual:entry';
 
 /**
- * checks if a file likely has a default export.
- * looks for common patterns in ESM and CJS.
- */
-function hasDefaultExport(source: string): boolean {
-	// ESM patterns
-	if (/\bexport\s+default\b/.test(source)) {
-		return true;
-	}
-	if (/\bexport\s*\{\s*[^}]*\bdefault\b/.test(source)) {
-		return true;
-	}
-	// CJS patterns (bundlers typically convert these to default exports)
-	if (/\bmodule\.exports\s*=/.test(source)) {
-		return true;
-	}
-	if (/\bexports\.default\s*=/.test(source)) {
-		return true;
-	}
-	return false;
-}
-
-/**
  * creates a virtual entry point that imports and re-exports from a specific subpath.
  *
  * @param packageName the package name
@@ -225,9 +203,34 @@ export async function bundlePackage(
 						if (resolved) {
 							try {
 								const source = volume.readFileSync(resolved.id, 'utf8') as string;
-								includeDefault = hasDefaultExport(source);
+								const ast = this.parse(source);
+
+								for (const node of ast.body) {
+									// export default ...
+									if (node.type === 'ExportDefaultDeclaration') {
+										includeDefault = true;
+										break;
+									}
+
+									// export { default } from '...' or export { foo as default }
+									if (node.type === 'ExportNamedDeclaration') {
+										for (const spec of node.specifiers) {
+											const exported = spec.exported;
+											const name = exported.type === 'Literal' ? exported.value : exported.name;
+
+											if (name === 'default') {
+												includeDefault = true;
+												break;
+											}
+										}
+
+										if (includeDefault) {
+											break;
+										}
+									}
+								}
 							} catch {
-								// couldn't read file, skip default export
+								// couldn't read/parse file, skip default export
 							}
 						}
 					}

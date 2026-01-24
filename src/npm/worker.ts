@@ -2,6 +2,7 @@ import { memfs } from '@rolldown/browser/experimental';
 import * as v from 'valibot';
 
 import { stripAnsi } from '../lib/strings';
+
 import { bundlePackage, type BundleOptions } from './bundler';
 import { progress } from './events';
 import { fetchPackagesToVolume } from './fetch';
