@@ -17,6 +17,7 @@
 		"@mary/array-fns": "jsr:^0.1.5",
 		"@mary/tar": "jsr:^0.3.2",
 		"@rolldown/browser": "^1.0.0-rc.1",
+		"clsx": "^2.1.1",
 		"dequal": "^2.0.3",
 		"memfs": "^4.56.9",
 		"solid-js": "^1.9.10",

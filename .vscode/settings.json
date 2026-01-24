@@ -1,6 +1,6 @@
 {
 	"editor.defaultFormatter": "oxc.oxc-vscode",
 	"typescript.tsdk": "node_modules/typescript/lib",
-	"tailwindCSS.classFunctions": ["tw"],
+	"tailwindCSS.classFunctions": ["tw", "clsx"],
 	"tailwindCSS.classAttributes": ["class", "className", "classList"]
 }

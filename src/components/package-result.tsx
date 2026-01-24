@@ -1,6 +1,7 @@
 import { createSignal, Show } from 'solid-js';
 
 import type { PackageSession } from '../npm/worker-client';
+import Toggle from '../primitives/toggle';
 
 import PackageBundle from './package-bundle';
 import PackageDependencies from './package-dependencies';
@@ -17,6 +18,7 @@ const PackageResult = (props: PackageResultProps) => {
 	const [excludePeers, setExcludePeers] = createSignal(false);
 
 	const hasPeerDeps = result.peerDependencies.length > 0;
+	const hasSubpaths = result.subpaths.defaultSubpath !== null;
 
 	return (
 		<div class="flex flex-col gap-8">
@@ -29,21 +31,17 @@ const PackageResult = (props: PackageResultProps) => {
 				<span class="my-1.25 text-base-400 text-neutral-foreground-3">{result.version}</span>
 			</div>
 
-			{/* peer deps toggle */}
-			<Show when={hasPeerDeps}>
-				<label class="flex items-center gap-2 text-base-300 text-neutral-foreground-2">
-					<input
-						type="checkbox"
-						checked={excludePeers()}
-						onChange={(e) => setExcludePeers(e.currentTarget.checked)}
-						class="accent-brand-background-1 size-4"
-					/>
-					<span>Exclude peer dependencies</span>
-				</label>
-			</Show>
+			{hasPeerDeps && (
+				<Toggle
+					checked={excludePeers()}
+					onChange={(ev) => setExcludePeers(ev.currentTarget.checked)}
+					class="-mx-2"
+				>
+					Exclude peer dependencies
+				</Toggle>
+			)}
 
-			{/* bundle size section */}
-			{result.subpaths.defaultSubpath !== null && (
+			{hasSubpaths && (
 				<>
 					<PackageBundle
 						packageName={/* @once */ result.name}
@@ -56,7 +54,6 @@ const PackageResult = (props: PackageResultProps) => {
 				</>
 			)}
 
-			{/* install size section */}
 			<PackageDependencies
 				packages={/* @once */ result.packages}
 				installSize={/* @once */ result.installSize}

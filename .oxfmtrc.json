@@ -14,7 +14,7 @@
 	},
 	"experimentalTailwindcss": {
 		"stylesheet": "src/index.css",
-		"functions": ["tw"],
+		"functions": ["tw", "clsx"],
 		"attributes": ["class", "className", "classList"]
 	},
 
