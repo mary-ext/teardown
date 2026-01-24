@@ -63,6 +63,13 @@ export const DEFAULT_EXCLUDE_PATTERNS: RegExp[] = [
 
 	// typescript declaration files (not needed for bundling)
 	/\.d\.[cm]?ts$/,
+
+	// flow type annotations
+	/\.js\.flow$/,
+	/\.flow$/,
+
+	// example/demo directories
+	/^examples?\//i,
 ];
 
 /**
