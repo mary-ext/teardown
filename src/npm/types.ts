@@ -88,6 +88,7 @@ const bundleChunkSchema = v.object({
 	size: v.number(),
 	gzipSize: v.number(),
 	brotliSize: v.optional(v.number()),
+	zstdSize: v.optional(v.number()),
 	isEntry: v.boolean(),
 	exports: v.array(v.string()),
 });
@@ -99,6 +100,7 @@ const bundleResultSchema = v.object({
 	size: v.number(),
 	gzipSize: v.number(),
 	brotliSize: v.optional(v.number()),
+	zstdSize: v.optional(v.number()),
 	exports: v.array(v.string()),
 	isCjs: v.boolean(),
 });

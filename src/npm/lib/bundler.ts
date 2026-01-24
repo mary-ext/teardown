@@ -79,6 +79,41 @@ export async function getBrotliSize(code: string): Promise<number | undefined> {
 	return getCompressedSize(code, 'brotli');
 }
 
+/**
+ * whether zstd compression is supported.
+ * - `undefined`: not yet checked
+ * - `true`: supported
+ * - `false`: not supported
+ */
+export let isZstdSupported: boolean | undefined;
+
+/**
+ * get zstd size using compression stream, if supported.
+ * returns `undefined` if zstd is not supported by the browser.
+ */
+export async function getZstdSize(code: string): Promise<number | undefined> {
+	if (isZstdSupported === false) {
+		return undefined;
+	}
+
+	if (isZstdSupported === undefined) {
+		try {
+			// @ts-expect-error 'zstd' is not in the type definition yet
+			const size = await getCompressedSize(code, 'zstd');
+			console.log(`[worker] zstd supported`);
+			isZstdSupported = true;
+			return size;
+		} catch {
+			console.log(`[worker] zstd not supported`);
+			isZstdSupported = false;
+			return undefined;
+		}
+	}
+
+	// @ts-expect-error 'zstd' is not in the type definition yet
+	return getCompressedSize(code, 'zstd');
+}
+
 // #endregion
 
 // #region core
@@ -194,7 +229,11 @@ export async function bundlePackage(
 		rawChunks.map(async (chunk) => {
 			const code = chunk.code;
 			const size = getUtf8Length(code);
-			const [gzipSize, brotliSize] = await Promise.all([getGzipSize(code), getBrotliSize(code)]);
+			const [gzipSize, brotliSize, zstdSize] = await Promise.all([
+				getGzipSize(code),
+				getBrotliSize(code),
+				getZstdSize(code),
+			]);
 
 			return {
 				fileName: chunk.fileName,
@@ -202,6 +241,7 @@ export async function bundlePackage(
 				size,
 				gzipSize,
 				brotliSize,
+				zstdSize,
 				isEntry: chunk.isEntry,
 				exports: chunk.exports || [],
 			};
@@ -218,6 +258,7 @@ export async function bundlePackage(
 	const totalSize = chunks.reduce((acc, c) => acc + c.size, 0);
 	const totalGzipSize = chunks.reduce((acc, c) => acc + c.gzipSize, 0);
 	const totalBrotliSize = isBrotliSupported ? chunks.reduce((acc, c) => acc + c.brotliSize!, 0) : undefined;
+	const totalZstdSize = isZstdSupported ? chunks.reduce((acc, c) => acc + c.zstdSize!, 0) : undefined;
 
 	await bundle.close();
 
@@ -226,6 +267,7 @@ export async function bundlePackage(
 		size: totalSize,
 		gzipSize: totalGzipSize,
 		brotliSize: totalBrotliSize,
+		zstdSize: totalZstdSize,
 		exports: entryChunk.exports,
 		isCjs,
 	};

@@ -212,6 +212,16 @@ const PackageBundle = (props: PackageBundleProps) => {
 										</span>
 									</div>
 								</Show>
+
+								<Show when={bundleData().zstdSize !== undefined}>
+									<div class="w-px bg-neutral-stroke-3" />
+									<div class="flex flex-col gap-1">
+										<span class="text-base-300 text-neutral-foreground-3">Zstd</span>
+										<span class="text-base-500 font-semibold text-neutral-foreground-1">
+											{formatBytes(bundleData().zstdSize!)}
+										</span>
+									</div>
+								</Show>
 								<Show when={bundle.state === 'refreshing'}>
 									<div class="flex items-center">
 										<LucideLoader class="size-5 animate-spin-linear text-neutral-foreground-3" />
