@@ -2,6 +2,15 @@ import type { ResolvedPackage } from './types';
 import type { InstalledPackage } from './worker-protocol';
 
 /**
+ * reference to a package in a dependency relationship.
+ */
+interface PackageRef {
+	name: string;
+	version: string;
+	isPeer: boolean;
+}
+
+/**
  * builds the installed packages list from the resolved dependency tree.
  * also identifies which packages are only reachable through peer dependencies.
  *
@@ -10,19 +19,21 @@ import type { InstalledPackage } from './worker-protocol';
  * @returns array of installed packages with peer status
  */
 export function buildInstalledPackages(root: ResolvedPackage, peerDepNames: Set<string>): InstalledPackage[] {
-	// first pass: collect all unique packages and compute levels + installedBy
+	// collect all unique packages and compute levels
 	const packageMap = new Map<
 		string,
 		{
 			pkg: ResolvedPackage;
 			level: number;
-			installedBy: number;
+			dependents: PackageRef[];
+			dependencies: PackageRef[];
 		}
 	>();
 
 	// track which packages are reachable without going through peer deps
 	const reachableWithoutPeers = new Set<string>();
 
+	// first pass: collect packages and compute levels
 	{
 		const visited = new Set<string>();
 
@@ -36,7 +47,7 @@ export function buildInstalledPackages(root: ResolvedPackage, peerDepNames: Set<
 					existing.level = level;
 				}
 			} else {
-				packageMap.set(key, { pkg, level, installedBy: 0 });
+				packageMap.set(key, { pkg, level, dependents: [], dependencies: [] });
 			}
 
 			// track if reachable without peers
@@ -50,16 +61,7 @@ export function buildInstalledPackages(root: ResolvedPackage, peerDepNames: Set<
 			}
 			visited.add(key);
 
-			// count installedBy for each dependency
 			for (const [depName, dep] of pkg.dependencies) {
-				const depKey = `${dep.name}@${dep.version}`;
-				const depEntry = packageMap.get(depKey);
-				if (depEntry) {
-					depEntry.installedBy++;
-				} else {
-					packageMap.set(depKey, { pkg: dep, level: level + 1, installedBy: 1 });
-				}
-
 				// check if this edge goes through a root peer dep
 				const isPeerEdge = pkg === root && peerDepNames.has(depName);
 				walk(dep, level + 1, inPeerSubtree || isPeerEdge);
@@ -71,17 +73,50 @@ export function buildInstalledPackages(root: ResolvedPackage, peerDepNames: Set<
 		walk(root, 0, false);
 	}
 
+	// second pass: build dependency/dependent relationships
+	// we need to read peerDependencies from each package's manifest
+	for (const [_key, entry] of packageMap) {
+		const pkg = entry.pkg;
+
+		for (const [depName, dep] of pkg.dependencies) {
+			const depKey = `${dep.name}@${dep.version}`;
+			const depEntry = packageMap.get(depKey);
+			if (!depEntry) {
+				continue;
+			}
+
+			// check if this is a peer dependency edge by looking at the manifest
+			// note: during resolution, peer deps are added to dependencies map
+			// we need to check the original peerDependencies field
+			const isPeerDep = pkg === root && peerDepNames.has(depName);
+
+			// add to this package's dependencies
+			entry.dependencies.push({
+				name: dep.name,
+				version: dep.version,
+				isPeer: isPeerDep,
+			});
+
+			// add to the dependency's dependents
+			depEntry.dependents.push({
+				name: pkg.name,
+				version: pkg.version,
+				isPeer: isPeerDep,
+			});
+		}
+	}
+
 	// build final array
 	const packages: InstalledPackage[] = [];
-	for (const [key, { pkg, level, installedBy }] of packageMap) {
+	for (const [key, { pkg, level, dependents, dependencies }] of packageMap) {
 		packages.push({
 			name: pkg.name,
 			version: pkg.version,
 			size: pkg.unpackedSize ?? 0,
 			path: `node_modules/${pkg.name}`,
 			level,
-			installedBy,
-			dependencyCount: pkg.dependencies.size,
+			dependents,
+			dependencies,
 			description: pkg.description,
 			license: pkg.license,
 			isPeer: !reachableWithoutPeers.has(key),

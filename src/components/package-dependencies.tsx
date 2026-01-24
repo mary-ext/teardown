@@ -32,11 +32,11 @@ const SORT_OPTIONS: Record<SortOption, SortConfig> = {
 	},
 	installedBy: {
 		label: 'Installed by count',
-		compare: (a, b) => b.installedBy - a.installedBy || a.name.localeCompare(b.name),
+		compare: (a, b) => b.dependents.length - a.dependents.length || a.name.localeCompare(b.name),
 	},
 	dependencies: {
 		label: 'Dependencies count',
-		compare: (a, b) => b.dependencyCount - a.dependencyCount || a.name.localeCompare(b.name),
+		compare: (a, b) => b.dependencies.length - a.dependencies.length || a.name.localeCompare(b.name),
 	},
 	name: {
 		label: 'Name',
@@ -147,11 +147,12 @@ const PackageCard = (props: PackageCardProps) => {
 				{/* stats */}
 				<div class="flex flex-wrap gap-4 text-base-300">
 					<span class="text-neutral-foreground-3">
-						<span class="font-medium text-neutral-foreground-2">Installed by:</span> {props.pkg.installedBy}
+						<span class="font-medium text-neutral-foreground-2">Installed by:</span>{' '}
+						{props.pkg.dependents.length}
 					</span>
 					<span class="text-neutral-foreground-3">
 						<span class="font-medium text-neutral-foreground-2">Dependencies:</span>{' '}
-						{props.pkg.dependencyCount}
+						{props.pkg.dependencies.length}
 					</span>
 				</div>
 			</div>

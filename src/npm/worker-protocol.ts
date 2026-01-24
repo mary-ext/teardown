@@ -40,14 +40,20 @@ const discoveredSubpathsSchema = v.object({
 	defaultSubpath: v.nullable(v.string()),
 });
 
+const packageRefSchema = v.object({
+	name: v.string(),
+	version: v.string(),
+	isPeer: v.boolean(),
+});
+
 const installedPackageSchema = v.object({
 	name: v.string(),
 	version: v.string(),
 	size: v.number(),
 	path: v.string(),
 	level: v.number(),
-	installedBy: v.number(),
-	dependencyCount: v.number(),
+	dependents: v.array(packageRefSchema),
+	dependencies: v.array(packageRefSchema),
 	description: v.optional(v.string()),
 	license: v.optional(v.string()),
 	isPeer: v.boolean(),

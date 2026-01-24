@@ -23,26 +23,28 @@ describe('buildInstalledPackages', () => {
 		expect(packages.every((p) => !p.isPeer)).toBe(true);
 	});
 
-	it('correctly sets installedBy count', async () => {
+	it('correctly sets dependents', async () => {
 		const result = await resolve(['is-odd@3.0.1']);
 		const packages = buildInstalledPackages(result.roots[0], new Set());
 
-		// is-odd is the root, installedBy should be 0
+		// is-odd is the root, no dependents
 		const isOdd = packages.find((p) => p.name === 'is-odd')!;
-		expect(isOdd.installedBy).toBe(0);
+		expect(isOdd.dependents.length).toBe(0);
 
 		// is-number is depended on by is-odd
 		const isNumber = packages.find((p) => p.name === 'is-number')!;
-		expect(isNumber.installedBy).toBe(1);
+		expect(isNumber.dependents.length).toBe(1);
+		expect(isNumber.dependents[0].name).toBe('is-odd');
 	});
 
-	it('correctly sets dependencyCount', async () => {
+	it('correctly sets dependencies', async () => {
 		const result = await resolve(['is-odd@3.0.1']);
 		const packages = buildInstalledPackages(result.roots[0], new Set());
 
 		// is-odd has 1 dependency (is-number)
 		const isOdd = packages.find((p) => p.name === 'is-odd')!;
-		expect(isOdd.dependencyCount).toBe(1);
+		expect(isOdd.dependencies.length).toBe(1);
+		expect(isOdd.dependencies[0].name).toBe('is-number');
 	});
 
 	it('marks peer dependencies correctly', async () => {
@@ -59,6 +61,11 @@ describe('buildInstalledPackages', () => {
 		// use-sync-external-store should not be marked as peer
 		const main = packages.find((p) => p.name === 'use-sync-external-store')!;
 		expect(main.isPeer).toBe(false);
+
+		// the dependency edge to react should be marked as peer
+		const reactDep = main.dependencies.find((d) => d.name === 'react');
+		expect(reactDep).toBeDefined();
+		expect(reactDep!.isPeer).toBe(true);
 	});
 
 	it('marks transitive peer deps correctly', async () => {
