@@ -101,6 +101,12 @@ export function buildInstalledPackages(root: ResolvedPackage, peerDepNames: Set<
 	// build final array
 	const packages: InstalledPackage[] = [];
 	for (const [key, { pkg, level, dependents, dependencies }] of packageMap) {
+		// a package is a peer if:
+		// 1. it's a direct peer dependency of the root, OR
+		// 2. it's only reachable through peer dependency subtrees
+		const isDirectPeerOfRoot = peerDepNames.has(pkg.name);
+		const isOnlyReachableThroughPeers = !reachableWithoutPeers.has(key);
+
 		packages.push({
 			name: pkg.name,
 			version: pkg.version,
@@ -111,7 +117,7 @@ export function buildInstalledPackages(root: ResolvedPackage, peerDepNames: Set<
 			dependencies,
 			description: pkg.description,
 			license: pkg.license,
-			isPeer: !reachableWithoutPeers.has(key),
+			isPeer: isDirectPeerOfRoot || isOnlyReachableThroughPeers,
 		});
 	}
 

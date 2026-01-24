@@ -114,15 +114,17 @@ const SizeBreakdownBar = (props: SizeBreakdownBarProps) => {
 
 interface PackageCardProps {
 	pkg: InstalledPackage;
-	percent: number;
+	installSize: number;
 }
 
 const PackageCard = (props: PackageCardProps) => {
+	const percent = () => (props.pkg.size / props.installSize) * 100;
+
 	return (
 		<div class="group duration-fast flex gap-4 rounded-lg border border-transparent px-3 py-4 transition hover:border-neutral-stroke-3 hover:bg-neutral-background-1">
 			{/* left side: percentage and size */}
 			<div class="flex w-16 shrink-0 flex-col items-end text-right">
-				<span class="text-base-400 font-semibold text-neutral-foreground-1">{props.percent.toFixed(0)}%</span>
+				<span class="text-base-400 font-semibold text-neutral-foreground-1">{percent().toFixed(0)}%</span>
 				<span class="text-base-300 text-neutral-foreground-3">{formatBytes(props.pkg.size)}</span>
 			</div>
 
@@ -244,10 +246,7 @@ const PackageDependencies = (props: PackageDependenciesProps) => {
 			{/* package list */}
 			<div class="-mx-3 flex flex-col">
 				<For each={filteredAndSorted()}>
-					{(pkg) => {
-						const percent = (pkg.size / displayInstallSize()) * 100;
-						return <PackageCard pkg={pkg} percent={percent} />;
-					}}
+					{(pkg) => <PackageCard pkg={pkg} installSize={displayInstallSize()} />}
 				</For>
 
 				<Show when={filteredAndSorted().length === 0}>

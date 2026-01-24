@@ -83,17 +83,36 @@ describe('buildInstalledPackages', () => {
 		}
 	});
 
-	it('does not mark shared deps as peer when reachable both ways', async () => {
-		// if a package is reachable through both regular and peer deps,
-		// it should NOT be marked as peer
+	it('marks direct peer deps as peer even when also a transitive dep', async () => {
+		// if a package is a direct peer dep of root but also reachable through
+		// a transitive non-peer path, it should still be marked as peer
 		const result = await resolve(['is-odd@3.0.1']);
 
 		// pretend is-number is also a peer dep (but it's already a regular dep)
 		const peerDepNames = new Set(['is-number']);
 		const packages = buildInstalledPackages(result.roots[0], peerDepNames);
 
-		// is-number should still be marked as peer because it's only through peer edge
+		// is-number should be marked as peer because it's a direct peer dep of root
 		const isNumber = packages.find((p) => p.name === 'is-number')!;
 		expect(isNumber.isPeer).toBe(true);
+	});
+
+	it('marks peer deps as peer when also reachable through transitive deps', async () => {
+		// graphql-request has graphql as a peer dep
+		// @graphql-typed-document-node/core (a regular dep) also depends on graphql
+		// graphql should still be marked as peer since it's a direct peer dep of root
+		const result = await resolve(['graphql-request@7.4.0']);
+		const peerDepNames = new Set(['graphql']);
+		const packages = buildInstalledPackages(result.roots[0], peerDepNames);
+
+		// graphql should be marked as peer
+		const graphql = packages.find((p) => p.name === 'graphql');
+		expect(graphql).toBeDefined();
+		expect(graphql!.isPeer).toBe(true);
+
+		// @graphql-typed-document-node/core should NOT be marked as peer
+		const typedDocNode = packages.find((p) => p.name === '@graphql-typed-document-node/core');
+		expect(typedDocNode).toBeDefined();
+		expect(typedDocNode!.isPeer).toBe(false);
 	});
 });
