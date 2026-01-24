@@ -62,7 +62,6 @@ export const RECOMMENDATIONS: (string | string[])[] = [
 
 	// date/time
 	['date-fns', '@date-fns/tz', '@date-fns/utc'],
-	'dayjs',
 	'@formkit/tempo',
 	'luxon',
 
@@ -112,7 +111,6 @@ export const RECOMMENDATIONS: (string | string[])[] = [
 	['@fluent/bundle', '@fluent/react'],
 	['i18next', 'react-i18next', 'vue-i18n'],
 	['@lingui/core', '@lingui/react'],
-	'@inlang/paraglide-js',
 
 	// markdown
 	'markdown-it',
