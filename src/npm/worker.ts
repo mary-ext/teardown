@@ -7,14 +7,14 @@ import { bundlePackage, type BundleOptions } from './bundler';
 import { progress } from './events';
 import { fetchPackagesToVolume } from './fetch';
 import { hoist } from './hoist';
+import { buildInstalledPackages } from './installed-packages';
 import { resolve } from './resolve';
 import { discoverSubpaths } from './subpaths';
-import type { HoistedNode, HoistedResult, PackageJson, ResolvedPackage } from './types';
+import type { PackageJson } from './types';
 import {
 	workerRequestSchema,
 	type InitOptions,
 	type InitResult,
-	type InstalledPackage,
 	type WorkerResponse,
 } from './worker-protocol';
 
@@ -24,91 +24,6 @@ const { volume } = memfs!;
 progress.listen((msg) => {
 	self.postMessage(msg satisfies WorkerResponse);
 });
-
-// #region helpers
-
-function computePackageLevels(roots: ResolvedPackage[]): Map<string, number> {
-	const levels = new Map<string, number>();
-	const visited = new Set<string>();
-
-	function walk(pkg: ResolvedPackage, level: number): void {
-		const key = `${pkg.name}@${pkg.version}`;
-
-		const existingLevel = levels.get(key);
-		if (existingLevel === undefined || level < existingLevel) {
-			levels.set(key, level);
-		}
-
-		if (visited.has(key)) {
-			return;
-		}
-		visited.add(key);
-
-		for (const dep of pkg.dependencies.values()) {
-			walk(dep, level + 1);
-		}
-
-		visited.delete(key);
-	}
-
-	for (const root of roots) {
-		walk(root, 0);
-	}
-
-	return levels;
-}
-
-function buildInstalledPackages(
-	hoisted: HoistedResult,
-	packageLevels: Map<string, number>,
-): InstalledPackage[] {
-	const packages: InstalledPackage[] = [];
-	const installedByCount = new Map<string, number>();
-
-	function collectPackages(nodes: Map<string, HoistedNode>, basePath: string): void {
-		for (const node of nodes.values()) {
-			const path = `${basePath}/${node.name}`;
-			const key = `${node.name}@${node.version}`;
-
-			packages.push({
-				name: node.name,
-				version: node.version,
-				size: node.unpackedSize ?? 0,
-				path,
-				level: packageLevels.get(key) ?? 0,
-				installedBy: 0,
-				dependencyCount: node.dependencyCount,
-				description: node.description,
-				license: node.license,
-			});
-
-			for (const nested of node.nested.values()) {
-				const nestedKey = `${nested.name}@${nested.version}`;
-				installedByCount.set(nestedKey, (installedByCount.get(nestedKey) ?? 0) + 1);
-			}
-
-			if (node.nested.size > 0) {
-				collectPackages(node.nested, `${path}/node_modules`);
-			}
-		}
-	}
-
-	for (const node of hoisted.root.values()) {
-		const key = `${node.name}@${node.version}`;
-		installedByCount.set(key, (installedByCount.get(key) ?? 0) + 1);
-	}
-
-	collectPackages(hoisted.root, 'node_modules');
-
-	for (const pkg of packages) {
-		const key = `${pkg.name}@${pkg.version}`;
-		pkg.installedBy = installedByCount.get(key) ?? 0;
-	}
-
-	return packages;
-}
-
-// #endregion
 
 // #region state
 
@@ -151,8 +66,11 @@ async function handleInit(id: number, packageSpec: string, options: InitOptions 
 
 		const subpaths = discoverSubpaths(manifest, volume);
 
-		const packageLevels = computePackageLevels(resolution.roots);
-		const packages = buildInstalledPackages(hoisted, packageLevels);
+		// get peer dependency names from manifest
+		const peerDependencies = Object.keys(manifest.peerDependencies ?? {});
+		const peerDepNames = new Set(peerDependencies);
+
+		const packages = buildInstalledPackages(mainPackage, peerDepNames);
 		const installSize = packages.reduce((sum, pkg) => sum + pkg.size, 0);
 
 		initResult = {
@@ -161,6 +79,7 @@ async function handleInit(id: number, packageSpec: string, options: InitOptions 
 			subpaths,
 			installSize,
 			packages,
+			peerDependencies,
 		};
 
 		self.postMessage({ id, type: 'init', result: initResult } satisfies WorkerResponse);

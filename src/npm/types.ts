@@ -14,6 +14,7 @@ export interface PackageJson {
 	typings?: string;
 	exports?: PackageExports;
 	type?: 'module' | 'commonjs';
+	peerDependencies?: Record<string, string>;
 }
 
 /**

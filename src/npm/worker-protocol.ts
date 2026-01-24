@@ -50,6 +50,7 @@ const installedPackageSchema = v.object({
 	dependencyCount: v.number(),
 	description: v.optional(v.string()),
 	license: v.optional(v.string()),
+	isPeer: v.boolean(),
 });
 
 const initResultSchema = v.object({
@@ -58,6 +59,7 @@ const initResultSchema = v.object({
 	subpaths: discoveredSubpathsSchema,
 	installSize: v.number(),
 	packages: v.array(installedPackageSchema),
+	peerDependencies: v.array(v.string()),
 });
 
 const bundleChunkSchema = v.object({

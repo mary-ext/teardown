@@ -16,11 +16,9 @@ import * as Field from '../primitives/field';
 
 // #region helpers
 
-function serializeCacheKey(subpath: string, exports: string[] | null): string {
-	if (exports === null) {
-		return subpath;
-	}
-	return `${subpath}\0${exports.join('\0')}`;
+function serializeCacheKey(subpath: string, exports: string[] | null, excludePeers: boolean): string {
+	const base = exports === null ? subpath : `${subpath}\0${exports.join('\0')}`;
+	return excludePeers ? `${base}\0peers` : base;
 }
 
 function arraysEqual(a: string[], b: string[]): boolean {
@@ -43,12 +41,15 @@ interface PackageBundleProps {
 	packageName: string;
 	subpaths: DiscoveredSubpaths;
 	worker: BundlerWorker;
+	excludePeers: boolean;
+	peerDependencies: string[];
 }
 
 const PackageBundle = (props: PackageBundleProps) => {
 	const packageName = props.packageName;
 	const subpaths = props.subpaths;
 	const worker = props.worker;
+	const peerDependencies = props.peerDependencies;
 
 	/** formats a subpath for display, replacing `.` and `./` with the package name */
 	const formatSubpath = (subpath: string) => {
@@ -62,7 +63,7 @@ const PackageBundle = (props: PackageBundleProps) => {
 		return subpath;
 	};
 
-	const bundleCache = new LRUCache<string, BundleResult>(16);
+	const bundleCache = new LRUCache<string, BundleResult>(32);
 
 	const [subpath, setSubpath] = createSignal(subpaths.defaultSubpath!);
 
@@ -70,7 +71,7 @@ const PackageBundle = (props: PackageBundleProps) => {
 	const [initialBundle, { refetch: refetchInitial }] = createQuery(
 		subpath,
 		async (subpath) => {
-			const cacheKey = serializeCacheKey(subpath, null);
+			const cacheKey = serializeCacheKey(subpath, null, false);
 			const cached = bundleCache.peek(cacheKey);
 			if (cached) {
 				return cached;
@@ -106,16 +107,17 @@ const PackageBundle = (props: PackageBundleProps) => {
 			// if selection equals all exports, pass null to reuse LRU cache
 			const exportsParam = arraysEqual(exports, $initialBundle.exports) ? null : exports;
 
-			return { subpath: $subpath, exports: exportsParam };
+			return { subpath: $subpath, exports: exportsParam, excludePeers: props.excludePeers };
 		},
-		async ({ subpath, exports }) => {
-			const cacheKey = serializeCacheKey(subpath, exports);
+		async ({ subpath, exports, excludePeers }) => {
+			const cacheKey = serializeCacheKey(subpath, exports, excludePeers);
 			const cached = bundleCache.get(cacheKey);
 			if (cached) {
 				return cached;
 			}
 
-			const res = await worker.bundle(subpath, exports);
+			const options = excludePeers ? { rolldown: { external: peerDependencies } } : undefined;
+			const res = await worker.bundle(subpath, exports, options);
 			bundleCache.put(cacheKey, res);
 			return res;
 		},

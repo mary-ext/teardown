@@ -166,17 +166,27 @@ const PackageCard = (props: PackageCardProps) => {
 interface PackageDependenciesProps {
 	packages: InstalledPackage[];
 	installSize: number;
+	excludePeers: boolean;
 }
 
 const PackageDependencies = (props: PackageDependenciesProps) => {
 	const [filter, setFilter] = createSignal('');
 	const [sortBy, setSortBy] = createSignal<SortOption>('level');
 
+	// filter out peer packages when excludePeers is true
+	const displayPackages = createMemo(() => {
+		return props.excludePeers ? props.packages.filter((p) => !p.isPeer) : props.packages;
+	});
+
+	const displayInstallSize = createMemo(() => {
+		return displayPackages().reduce((sum, pkg) => sum + pkg.size, 0);
+	});
+
 	const filteredAndSorted = createMemo(() => {
 		const filterText = filter().toLowerCase();
 		const sortConfig = SORT_OPTIONS[sortBy()];
 
-		let result = props.packages;
+		let result = displayPackages();
 
 		if (filterText) {
 			result = result.filter(
@@ -195,14 +205,14 @@ const PackageDependencies = (props: PackageDependenciesProps) => {
 				<h3 class="text-base-400 font-semibold text-neutral-foreground-1">Install size</h3>
 				<div class="text-base-300 text-neutral-foreground-2">
 					<span class="text-base-400 font-semibold text-neutral-foreground-1">
-						{formatBytes(props.installSize)}
+						{formatBytes(displayInstallSize())}
 					</span>
-					<span class="text-neutral-foreground-3"> across {props.packages.length} packages</span>
+					<span class="text-neutral-foreground-3"> across {displayPackages().length} packages</span>
 				</div>
 			</div>
 
 			{/* size breakdown bar */}
-			<SizeBreakdownBar packages={props.packages} installSize={props.installSize} />
+			<SizeBreakdownBar packages={displayPackages()} installSize={displayInstallSize()} />
 
 			{/* filter and sort controls */}
 			<div class="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -234,7 +244,7 @@ const PackageDependencies = (props: PackageDependenciesProps) => {
 			<div class="-mx-3 flex flex-col">
 				<For each={filteredAndSorted()}>
 					{(pkg) => {
-						const percent = (pkg.size / props.installSize) * 100;
+						const percent = (pkg.size / displayInstallSize()) * 100;
 						return <PackageCard pkg={pkg} percent={percent} />;
 					}}
 				</For>
