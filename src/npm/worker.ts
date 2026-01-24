@@ -1,6 +1,7 @@
 import { memfs } from '@rolldown/browser/experimental';
 import * as v from 'valibot';
 
+import { stripAnsi } from '../lib/strings';
 import { bundlePackage, type BundleOptions } from './bundler';
 import { progress } from './events';
 import { fetchPackagesToVolume } from './fetch';
@@ -163,7 +164,7 @@ async function handleInit(id: number, packageSpec: string, options: InitOptions 
 
 		self.postMessage({ id, type: 'init', result: initResult } satisfies WorkerResponse);
 	} catch (error) {
-		self.postMessage({ id, type: 'error', error: String(error) } satisfies WorkerResponse);
+		self.postMessage({ id, type: 'error', error: stripAnsi(String(error)) } satisfies WorkerResponse);
 	}
 }
 
@@ -211,7 +212,7 @@ async function processBundleRequest(
 		const result = await bundlePackage(packageName!, subpath, selectedExports, options);
 		self.postMessage({ id, type: 'bundle', result } satisfies WorkerResponse);
 	} catch (error) {
-		self.postMessage({ id, type: 'error', error: String(error) } satisfies WorkerResponse);
+		self.postMessage({ id, type: 'error', error: stripAnsi(String(error)) } satisfies WorkerResponse);
 	} finally {
 		bundleInProgress = false;
 
