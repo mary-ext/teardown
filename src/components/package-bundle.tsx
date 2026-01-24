@@ -184,7 +184,7 @@ const PackageBundle = (props: PackageBundleProps) => {
 					</div>
 				</Match>
 
-				<Match when={bundle()}>
+				<Match when={initialBundle() && bundle()}>
 					{(bundleData) => (
 						<div class="flex flex-col gap-5">
 							{/* size display card */}
