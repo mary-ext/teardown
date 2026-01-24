@@ -165,6 +165,7 @@ async function handleInit(id: number, packageSpec: string, options: InitOptions 
 
 		self.postMessage({ id, type: 'init', result: initResult } satisfies WorkerResponse);
 	} catch (error) {
+		console.error('[worker] init error:', error);
 		self.postMessage({ id, type: 'error', error: stripAnsi(String(error)) } satisfies WorkerResponse);
 	}
 }
@@ -213,6 +214,7 @@ async function processBundleRequest(
 		const result = await bundlePackage(packageName!, subpath, selectedExports, options);
 		self.postMessage({ id, type: 'bundle', result } satisfies WorkerResponse);
 	} catch (error) {
+		console.error('[worker] bundle error:', error);
 		self.postMessage({ id, type: 'error', error: stripAnsi(String(error)) } satisfies WorkerResponse);
 	} finally {
 		bundleInProgress = false;
