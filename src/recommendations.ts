@@ -2,7 +2,6 @@ export const RECOMMENDATIONS: (string | string[])[] = [
 	// UI frameworks
 	'lit-html',
 	'preact',
-	'react',
 	'solid-js',
 	'svelte',
 	'vue',
@@ -11,7 +10,6 @@ export const RECOMMENDATIONS: (string | string[])[] = [
 	'@solidjs/router',
 	['@tanstack/react-router', '@tanstack/solid-router'],
 	'navaid',
-	'path-to-regexp',
 	'react-router',
 	'regexparam',
 	'trouter',
@@ -51,7 +49,6 @@ export const RECOMMENDATIONS: (string | string[])[] = [
 	'wretch',
 
 	// validation/schema
-	'ajv',
 	'arktype',
 	'@badrap/valita',
 	'@sinclair/typebox',
@@ -66,38 +63,30 @@ export const RECOMMENDATIONS: (string | string[])[] = [
 	'luxon',
 
 	// class names/styling
-	'classnames',
 	'clsx',
 	'tailwind-merge',
 
 	// ID generation
 	'cuid2',
-	'human-id',
 	'nanoid',
 	'ulid',
 	'uuid',
 
 	// deep clone/equality
 	'dequal',
-	'fast-deep-equal',
 	'klona',
-	'rfdc',
 
 	// object utilities
-	'deepmerge',
 	'defu',
 	'destr',
 	'dot-prop',
 
 	// string utilities
 	'change-case',
-	'slugify',
 
 	// memoization / caching
-	'fast-memoize',
 	'memoize',
 	'p-memoize',
-	'tinylru',
 
 	// throttle / debounce
 	'throttle-debounce',
@@ -197,7 +186,6 @@ export const RECOMMENDATIONS: (string | string[])[] = [
 	// storage
 	'idb',
 	'idb-keyval',
-	'localforage',
 
 	// CSV
 	'papaparse',
@@ -211,6 +199,7 @@ export const RECOMMENDATIONS: (string | string[])[] = [
 
 	// compression
 	'fflate',
+	'fzstd',
 	'pako',
 
 	// encoding / binary
@@ -218,7 +207,7 @@ export const RECOMMENDATIONS: (string | string[])[] = [
 	'uint8arrays',
 
 	// cryptography
-	'@noble/curves',
+	['@noble/curves', '@noble/secp256k1', '@noble/ed25519'],
 	'@noble/hashes',
 
 	// color
@@ -231,7 +220,6 @@ export const RECOMMENDATIONS: (string | string[])[] = [
 	'decimal.js',
 
 	// formatting
-	'ms',
 	'pretty-bytes',
 
 	// serialization
@@ -293,7 +281,6 @@ export const RECOMMENDATIONS: (string | string[])[] = [
 	// CSS-in-JS / styling
 	['@emotion/react', '@emotion/styled'],
 	'styled-components',
-	'styled-jsx',
 
 	// positioning/floating
 	'nanopop',
