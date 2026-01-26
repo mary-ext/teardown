@@ -44,29 +44,135 @@ const SORT_OPTIONS: Record<SortOption, SortConfig> = {
 	},
 };
 
-/** colors for the size breakdown bar segments */
+/** colors for the size breakdown bar segments (Tailwind 500 palette) */
 const SEGMENT_COLORS = [
+	tw`bg-[#ef4444]`, // red
 	tw`bg-[#f97316]`, // orange
 	tw`bg-[#eab308]`, // yellow
+	tw`bg-[#84cc16]`, // lime
 	tw`bg-[#22c55e]`, // green
+	tw`bg-[#10b981]`, // emerald
 	tw`bg-[#06b6d4]`, // cyan
+	tw`bg-[#0ea5e9]`, // sky
 	tw`bg-[#3b82f6]`, // blue
+	tw`bg-[#6366f1]`, // indigo
 	tw`bg-[#8b5cf6]`, // violet
+	tw`bg-[#d946ef]`, // fuchsia
 	tw`bg-[#ec4899]`, // pink
-	tw`bg-[#f43f5e]`, // rose
 ];
 
 // #endregion
 
 // #region size breakdown bar
 
-/** derives a consistent color index from a package name */
-function getColorIndex(name: string): number {
-	let hash = 0;
-	for (let i = 0; i < name.length; i++) {
-		hash = (hash * 31 + name.charCodeAt(i)) | 0;
+/**
+ * cyrb53 hash - fast 53-bit hash with good distribution.
+ * @see https://github.com/bryc/code/blob/master/jshash/experimental/cyrb53.js
+ */
+function cyrb53(str: string, seed = 0): number {
+	let h1 = 0xdeadbeef ^ seed;
+	let h2 = 0x41c6ce57 ^ seed;
+	for (let i = 0; i < str.length; i++) {
+		const ch = str.charCodeAt(i);
+		h1 = Math.imul(h1 ^ ch, 2654435761);
+		h2 = Math.imul(h2 ^ ch, 1597334677);
 	}
-	return Math.abs(hash) % SEGMENT_COLORS.length;
+	h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507);
+	h1 ^= Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+	h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507);
+	h2 ^= Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+	return 4294967296 * (2097151 & h2) + (h1 >>> 0);
+}
+
+/** derives a consistent color index from a package name */
+function getCanonicalColorIndex(name: string): number {
+	return cyrb53(name) % SEGMENT_COLORS.length;
+}
+
+/** threshold above which we use greedy instead of DP (for performance) */
+const COLOR_RESOLUTION_DP_LIMIT = 2000;
+
+/**
+ * resolves adjacent color collisions with globally minimal adjustments.
+ * uses dynamic programming to find the assignment that changes the fewest segments
+ * from their canonical (hash-based) colors while ensuring no adjacent segments share a color.
+ * falls back to greedy for very large inputs.
+ */
+function resolveColorCollisions(canonicalIndices: number[]): number[] {
+	const numSegments = canonicalIndices.length;
+	const numColors = SEGMENT_COLORS.length;
+
+	if (numSegments === 0) {
+		return [];
+	}
+	if (numSegments === 1) {
+		return [canonicalIndices[0]];
+	}
+
+	// fall back to greedy for very large inputs
+	if (numSegments > COLOR_RESOLUTION_DP_LIMIT) {
+		const resolved: number[] = [canonicalIndices[0]];
+		for (let i = 1; i < numSegments; i++) {
+			const canonical = canonicalIndices[i];
+			resolved.push(canonical === resolved[i - 1] ? (canonical + 1) % numColors : canonical);
+		}
+		return resolved;
+	}
+
+	// dp[c] = min cost to reach current position with color c
+	let prev = Array.from({ length: numColors }, () => 0);
+	let curr = Array.from({ length: numColors }, () => 0);
+
+	// parent[i][c] = color of position i that led to optimal assignment at position i+1 with color c
+	const parent: number[][] = [];
+
+	// base case: position 0
+	for (let c = 0; c < numColors; c++) {
+		prev[c] = c === canonicalIndices[0] ? 0 : 1;
+	}
+
+	// fill DP table
+	for (let i = 1; i < numSegments; i++) {
+		const canonical = canonicalIndices[i];
+		const parentRow = Array.from({ length: numColors }, () => 0);
+
+		for (let c = 0; c < numColors; c++) {
+			const cost = c === canonical ? 0 : 1;
+
+			// find best previous color that isn't c
+			let bestPrevCost = Infinity;
+			let bestPrevColor = 0;
+			for (let cp = 0; cp < numColors; cp++) {
+				if (cp !== c && prev[cp] < bestPrevCost) {
+					bestPrevCost = prev[cp];
+					bestPrevColor = cp;
+				}
+			}
+
+			curr[c] = cost + bestPrevCost;
+			parentRow[c] = bestPrevColor;
+		}
+
+		parent.push(parentRow);
+		[prev, curr] = [curr, prev];
+	}
+
+	// find best final color
+	let bestFinal = 0;
+	for (let c = 1; c < numColors; c++) {
+		if (prev[c] < prev[bestFinal]) {
+			bestFinal = c;
+		}
+	}
+
+	// backtrack to build result (build reversed, then flip)
+	let color = bestFinal;
+	const reversed = [color];
+	for (let i = parent.length - 1; i >= 0; i--) {
+		color = parent[i][color];
+		reversed.push(color);
+	}
+	return reversed.reverse();
 }
 
 interface SizeBreakdownBarProps {
@@ -78,10 +184,15 @@ const SizeBreakdownBar = (props: SizeBreakdownBarProps) => {
 	const segments = createMemo(() => {
 		// sort by size descending for the bar
 		const sorted = [...props.packages].sort((a, b) => b.size - a.size);
-		return sorted.map((pkg) => ({
+
+		// compute canonical colors, then resolve adjacent collisions
+		const canonicalIndices = sorted.map((pkg) => getCanonicalColorIndex(pkg.name));
+		const resolvedIndices = resolveColorCollisions(canonicalIndices);
+
+		return sorted.map((pkg, i) => ({
 			pkg,
 			percent: (pkg.size / props.installSize) * 100,
-			color: SEGMENT_COLORS[getColorIndex(pkg.name)],
+			color: SEGMENT_COLORS[resolvedIndices[i]],
 		}));
 	});
 
