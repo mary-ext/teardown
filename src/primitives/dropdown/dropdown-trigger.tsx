@@ -1,4 +1,5 @@
-import type { JSX } from 'solid-js';
+import clsx from 'clsx';
+import { createMemo, type JSX } from 'solid-js';
 
 import { LucideChevronDown } from '../../icons/lucide';
 import { tw } from '../../lib/classes';
@@ -30,7 +31,7 @@ export interface DropdownTriggerProps {
 
 // #region styles
 
-const rootBaseStyles = tw`inline-flex w-full items-center justify-between bg-neutral-background-1 align-middle outline-2 -outline-offset-2 outline-transparent transition duration-100 select-none`;
+const rootBaseStyles = tw`inline-flex w-full items-center justify-between bg-neutral-background-1 text-left align-middle outline-2 -outline-offset-2 outline-transparent transition duration-100 select-none`;
 
 const rootSizeStyles: Record<DropdownSize, string> = {
 	small: tw`min-h-6 gap-2 px-2 text-base-200`,
@@ -145,7 +146,7 @@ const DropdownTrigger = (props: DropdownTriggerProps) => {
 		}
 	};
 
-	const hasValue = () => ctx.selectedValue() !== undefined;
+	const hasValue = createMemo(() => ctx.selectedValue() !== undefined);
 
 	return (
 		<button
@@ -165,9 +166,15 @@ const DropdownTrigger = (props: DropdownTriggerProps) => {
 			onKeyDown={handleKeyDown}
 			class={`${rootBaseStyles} ${rootSizeStyles[size()]} ${rootAppearanceStyles[appearance()]} ${props.disabled ? rootDisabledStyles : isInvalid() ? rootInvalidStyles : ''} ${props.class ?? ''}`}
 		>
-			<span class={hasValue() ? 'text-neutral-foreground-1' : 'text-neutral-foreground-4'}>
+			<span
+				class={clsx(
+					`min-w-0 grow truncate`,
+					hasValue() ? `text-neutral-foreground-1` : `text-neutral-foreground-4`,
+				)}
+			>
 				{props.children ?? props.placeholder}
 			</span>
+
 			<LucideChevronDown class={`${iconSizeStyles[size()]} shrink-0 text-neutral-foreground-3`} />
 		</button>
 	);

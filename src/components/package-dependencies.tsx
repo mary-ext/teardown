@@ -316,6 +316,8 @@ const PackageDependencies = (props: PackageDependenciesProps) => {
 				(pkg) =>
 					pkg.name.toLowerCase().includes(filterText) || pkg.description?.toLowerCase().includes(filterText),
 			);
+		} else {
+			result = [...result];
 		}
 
 		return [...result].sort(sortConfig.compare);
@@ -338,30 +340,33 @@ const PackageDependencies = (props: PackageDependenciesProps) => {
 			<SizeBreakdownBar packages={displayPackages()} installSize={displayInstallSize()} />
 
 			{/* filter and sort controls */}
-			<div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-				{/* filter input */}
-				<Input
-					class="sm:flex-1"
-					type="text"
-					placeholder="Filter packages..."
-					value={filter()}
-					onInput={(e) => setFilter(e.currentTarget.value)}
-					contentBefore={<LucideSearch class="size-4" />}
-				/>
+			{displayPackages().length > 1 && (
+				<div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+					{/* filter input */}
+					<Input
+						class="sm:flex-4"
+						type="text"
+						placeholder="Filter packages..."
+						value={filter()}
+						onInput={(e) => setFilter(e.currentTarget.value)}
+						contentBefore={<LucideSearch class="size-4" />}
+					/>
 
-				{/* sort dropdown */}
-				<Dropdown.Root value={sortBy()} onValueChange={(v) => setSortBy(v as SortOption)}>
-					<Dropdown.Trigger class="w-auto">
-						<span class="mr-1 text-neutral-foreground-3">Sort:</span>
-						<span>{SORT_OPTIONS[sortBy()].label}</span>
-					</Dropdown.Trigger>
-					<Dropdown.Listbox>
-						<For each={Object.entries(SORT_OPTIONS) as [SortOption, SortConfig][]}>
-							{([key, config]) => <Dropdown.Option value={key}>{config.label}</Dropdown.Option>}
-						</For>
-					</Dropdown.Listbox>
-				</Dropdown.Root>
-			</div>
+					{/* sort dropdown */}
+					<Dropdown.Root value={sortBy()} onValueChange={(v) => setSortBy(v as SortOption)}>
+						<Dropdown.Trigger class="sm:flex-3">
+							<span class="whitespace-pre text-neutral-foreground-3">Sort by </span>
+							<span>{SORT_OPTIONS[sortBy()].label}</span>
+						</Dropdown.Trigger>
+
+						<Dropdown.Listbox>
+							<For each={Object.entries(SORT_OPTIONS) as [SortOption, SortConfig][]}>
+								{([key, config]) => <Dropdown.Option value={key}>{config.label}</Dropdown.Option>}
+							</For>
+						</Dropdown.Listbox>
+					</Dropdown.Root>
+				</div>
+			)}
 
 			{/* package list */}
 			<div class="-mx-3 flex flex-col">
