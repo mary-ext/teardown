@@ -65,10 +65,13 @@ export function parseSpecifier(spec: string): PackageSpecifier {
 
 /**
  * picks the best version from a packument that satisfies a range.
- * follows npm's algorithm:
+ * follows npm/pnpm's algorithm:
  * 1. if range is a dist-tag, use that version
- * 2. if range is a specific version, use that
- * 3. otherwise, find highest version that satisfies the semver range
+ * 2. if range is empty, treat as 'latest'
+ * 3. if range is a specific version (possibly with v prefix), use that
+ * 4. if 'latest' tag satisfies the range, prefer it over newer versions
+ * 5. otherwise, find highest non-deprecated version that satisfies the range
+ * 6. fall back to deprecated version if no non-deprecated match
  *
  * @param versions available versions (version string -> manifest)
  * @param distTags dist-tags mapping (e.g., { latest: "1.2.3" })
@@ -80,26 +83,60 @@ export function pickVersion(
 	distTags: Record<string, string>,
 	range: string,
 ): AbbreviatedManifest | null {
+	// empty range means latest
+	if (range === '') {
+		return versions[distTags.latest] ?? null;
+	}
+
 	// check if range is a dist-tag
 	if (range in distTags) {
 		const taggedVersion = distTags[range];
 		return versions[taggedVersion] ?? null;
 	}
 
+	// normalize loose version formats (v1.0.0, = 1.0.0)
+	const cleanedRange = semver.validRange(range, { loose: true }) ?? range;
+
 	// check if range is an exact version
 	if (versions[range]) {
 		return versions[range];
 	}
 
-	// find highest version satisfying the range
+	// check cleaned version (handles v1.0.0 -> 1.0.0)
+	const cleanedVersion = semver.clean(range, { loose: true });
+	if (cleanedVersion && versions[cleanedVersion]) {
+		return versions[cleanedVersion];
+	}
+
+	// for wildcard ranges, use loose mode to include prereleases
+	const isWildcard = range === '*' || range === 'x' || range === '';
+	const satisfiesOptions = { loose: true, includePrerelease: isWildcard };
+
+	// prefer 'latest' tag if it satisfies the range (pnpm behavior)
+	// publishers tag 'latest' intentionally, so respect that choice
+	const latestVersion = distTags.latest;
+	if (latestVersion && versions[latestVersion]) {
+		if (semver.satisfies(latestVersion, cleanedRange, satisfiesOptions)) {
+			return versions[latestVersion];
+		}
+	}
+
+	// find all versions satisfying the range
 	const validVersions = Object.keys(versions)
-		.filter((v) => semver.satisfies(v, range))
+		.filter((v) => semver.satisfies(v, cleanedRange, satisfiesOptions))
 		.sort(semver.rcompare);
 
 	if (validVersions.length === 0) {
 		return null;
 	}
 
+	// prefer non-deprecated versions (pnpm behavior)
+	const nonDeprecated = validVersions.filter((v) => !versions[v].deprecated);
+	if (nonDeprecated.length > 0) {
+		return versions[nonDeprecated[0]];
+	}
+
+	// fall back to deprecated if no alternatives
 	return versions[validVersions[0]];
 }
 
