@@ -115,8 +115,6 @@ export function buildInstalledPackages(root: ResolvedPackage, peerDepNames: Set<
 			level,
 			dependents,
 			dependencies,
-			description: pkg.description,
-			license: pkg.license,
 			isPeer: isDirectPeerOfRoot || isOnlyReachableThroughPeers,
 		});
 	}

@@ -4,7 +4,13 @@ import { progress } from '../events';
 
 import { InvalidSpecifierError, NoMatchingVersionError } from './errors';
 import { fetchPackument, reverseJsrName } from './registry';
-import type { PackageManifest, PackageSpecifier, Registry, ResolvedPackage, ResolutionResult } from './types';
+import type {
+	AbbreviatedManifest,
+	PackageSpecifier,
+	Registry,
+	ResolvedPackage,
+	ResolutionResult,
+} from './types';
 
 /**
  * parses a package specifier string into name, range, and registry.
@@ -70,10 +76,10 @@ export function parseSpecifier(spec: string): PackageSpecifier {
  * @returns the best matching manifest, or null if none match
  */
 export function pickVersion(
-	versions: Record<string, PackageManifest>,
+	versions: Record<string, AbbreviatedManifest>,
 	distTags: Record<string, string>,
 	range: string,
-): PackageManifest | null {
+): AbbreviatedManifest | null {
 	// check if range is a dist-tag
 	if (range in distTags) {
 		const taggedVersion = distTags[range];
@@ -176,8 +182,6 @@ async function resolvePackage(
 		tarball: manifest.dist.tarball,
 		integrity: manifest.dist.integrity,
 		unpackedSize: manifest.dist.unpackedSize,
-		description: manifest.description,
-		license: manifest.license,
 		dependencies: new Map(),
 	};
 

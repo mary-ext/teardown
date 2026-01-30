@@ -64,8 +64,6 @@ const installedPackageSchema = v.object({
 	level: v.number(),
 	dependents: v.array(packageRefSchema),
 	dependencies: v.array(packageRefSchema),
-	description: v.optional(v.string()),
-	license: v.optional(v.string()),
 	isPeer: v.boolean(),
 });
 

@@ -22,8 +22,6 @@ function tryPlaceAtRoot(root: Map<string, HoistedNode>, pkg: ResolvedPackage): b
 			tarball: pkg.tarball,
 			integrity: pkg.integrity,
 			unpackedSize: pkg.unpackedSize,
-			description: pkg.description,
-			license: pkg.license,
 			dependencyCount: pkg.dependencies.size,
 			nested: new Map(),
 		});
@@ -87,8 +85,6 @@ export function hoist(roots: ResolvedPackage[]): HoistedResult {
 				tarball: pkg.tarball,
 				integrity: pkg.integrity,
 				unpackedSize: pkg.unpackedSize,
-				description: pkg.description,
-				license: pkg.license,
 				dependencyCount: pkg.dependencies.size,
 				nested: new Map(),
 			};

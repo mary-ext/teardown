@@ -261,11 +261,6 @@ const PackageCard = (props: PackageCardProps) => {
 					</Show>
 				</div>
 
-				{/* description */}
-				<Show when={props.pkg.description}>
-					<p class="line-clamp-2 text-base-300 text-neutral-foreground-2">{props.pkg.description}</p>
-				</Show>
-
 				{/* stats */}
 				<div class="flex flex-wrap gap-4 text-base-300">
 					<span class="text-neutral-foreground-3">
@@ -312,10 +307,7 @@ const PackageDependencies = (props: PackageDependenciesProps) => {
 		let result = displayPackages();
 
 		if (filterText) {
-			result = result.filter(
-				(pkg) =>
-					pkg.name.toLowerCase().includes(filterText) || pkg.description?.toLowerCase().includes(filterText),
-			);
+			result = result.filter((pkg) => pkg.name.toLowerCase().includes(filterText));
 		} else {
 			result = [...result];
 		}

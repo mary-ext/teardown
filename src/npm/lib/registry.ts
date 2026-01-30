@@ -1,5 +1,7 @@
+import * as v from 'valibot';
+
 import { FetchError, InvalidSpecifierError, PackageNotFoundError } from './errors';
-import type { Packument, Registry } from './types';
+import { abbreviatedPackumentSchema, type AbbreviatedPackument, type Registry } from './types';
 
 const NPM_REGISTRY = 'https://registry.npmjs.org';
 const JSR_REGISTRY = 'https://npm.jsr.io';
@@ -8,7 +10,7 @@ const JSR_REGISTRY = 'https://npm.jsr.io';
  * cache for packuments to avoid refetching during resolution.
  * key format: "registry:name" (e.g., "npm:react" or "jsr:@luca/flag")
  */
-const packumentCache = new Map<string, Packument>();
+const packumentCache = new Map<string, AbbreviatedPackument>();
 
 /**
  * transforms a JSR package name to the npm-compatible format.
@@ -45,15 +47,18 @@ export function reverseJsrName(name: string): string {
 }
 
 /**
- * fetches the packument (full package metadata) from a registry.
- * uses the abbreviated format when possible for smaller payloads.
+ * fetches the abbreviated packument from a registry.
+ * the abbreviated format contains only installation-relevant metadata.
  *
  * @param name the package name (can be scoped like @scope/pkg)
  * @param registry which registry to fetch from (defaults to 'npm')
- * @returns the packument with all versions
- * @throws if the package doesn't exist or network fails
+ * @returns the abbreviated packument with all versions
+ * @throws if the package doesn't exist, network fails, or response is invalid
  */
-export async function fetchPackument(name: string, registry: Registry = 'npm'): Promise<Packument> {
+export async function fetchPackument(
+	name: string,
+	registry: Registry = 'npm',
+): Promise<AbbreviatedPackument> {
 	const cacheKey = `${registry}:${name}`;
 	const cached = packumentCache.get(cacheKey);
 	if (cached) {
@@ -91,7 +96,8 @@ export async function fetchPackument(name: string, registry: Registry = 'npm'): 
 		throw new FetchError(url, response.status, response.statusText);
 	}
 
-	const packument = (await response.json()) as Packument;
+	const json = await response.json();
+	const packument = v.parse(abbreviatedPackumentSchema, json);
 	packumentCache.set(cacheKey, packument);
 	return packument;
 }

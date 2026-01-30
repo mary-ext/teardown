@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { hoist, hoistedToPaths } from './hoist';
 import { reverseJsrName, transformJsrName } from './registry';
 import { parseSpecifier, pickVersion, resolve } from './resolve';
-import type { PackageManifest } from './types';
+import type { AbbreviatedManifest } from './types';
 
 describe('parseSpecifier', () => {
 	it('parses bare package name', () => {
@@ -132,26 +132,26 @@ describe('reverseJsrName', () => {
 });
 
 describe('pickVersion', () => {
-	const mockVersions: Record<string, PackageManifest> = {
+	const mockVersions: Record<string, AbbreviatedManifest> = {
 		'1.0.0': {
 			name: 'test',
 			version: '1.0.0',
-			dist: { tarball: 'https://example.com/test-1.0.0.tgz' },
+			dist: { tarball: 'https://example.com/test-1.0.0.tgz', shasum: 'abc123' },
 		},
 		'1.1.0': {
 			name: 'test',
 			version: '1.1.0',
-			dist: { tarball: 'https://example.com/test-1.1.0.tgz' },
+			dist: { tarball: 'https://example.com/test-1.1.0.tgz', shasum: 'abc124' },
 		},
 		'2.0.0': {
 			name: 'test',
 			version: '2.0.0',
-			dist: { tarball: 'https://example.com/test-2.0.0.tgz' },
+			dist: { tarball: 'https://example.com/test-2.0.0.tgz', shasum: 'abc125' },
 		},
 		'2.1.0-beta.1': {
 			name: 'test',
 			version: '2.1.0-beta.1',
-			dist: { tarball: 'https://example.com/test-2.1.0-beta.1.tgz' },
+			dist: { tarball: 'https://example.com/test-2.1.0-beta.1.tgz', shasum: 'abc126' },
 		},
 	};
 

@@ -1,67 +1,132 @@
-/**
- * the parsed package.json of the main package.
- * includes fields relevant for export discovery and display.
- */
-export interface PackageJson {
-	name: string;
-	version: string;
-	description?: string;
-	license?: string;
-	main?: string;
-	module?: string;
-	browser?: string | Record<string, string | false>;
-	types?: string;
-	typings?: string;
-	exports?: PackageExports;
-	type?: 'module' | 'commonjs';
-	peerDependencies?: Record<string, string>;
-}
+import * as v from 'valibot';
+
+// #region package.json schema
 
 /**
  * package exports field - can be a string, array, object, or nested conditions.
- * https://nodejs.org/api/packages.html#exports
+ * @see https://nodejs.org/api/packages.html#exports
  */
+const packageExportsSchema: v.GenericSchema<PackageExports> = v.union([
+	v.null(),
+	v.string(),
+	v.array(v.string()),
+	v.record(
+		v.string(),
+		v.lazy(() => packageExportsSchema),
+	),
+]);
+
 export type PackageExports = string | string[] | { [key: string]: PackageExports } | null;
 
 /**
- * npm registry packument - the full metadata for a package including all versions.
- * fetched from registry.npmjs.org/{package-name}
+ * base package.json schema with all standard fields.
+ * other schemas pick from this to ensure consistency.
+ * @see https://docs.npmjs.com/cli/v10/configuring-npm/package-json
  */
-export interface Packument {
-	name: string;
-	'dist-tags': Record<string, string>;
-	versions: Record<string, PackageManifest>;
-	time?: Record<string, string>;
-}
+export const packageJsonSchema = v.object({
+	name: v.string(),
+	version: v.string(),
+	description: v.optional(v.string()),
+	keywords: v.optional(v.array(v.string())),
+	homepage: v.optional(v.string()),
+	license: v.optional(v.string()),
+	main: v.optional(v.string()),
+	module: v.optional(v.string()),
+	browser: v.optional(v.union([v.string(), v.record(v.string(), v.union([v.string(), v.literal(false)]))])),
+	types: v.optional(v.string()),
+	typings: v.optional(v.string()),
+	exports: v.optional(packageExportsSchema),
+	type: v.optional(v.picklist(['module', 'commonjs'])),
+	bin: v.optional(v.union([v.string(), v.record(v.string(), v.string())])),
+	directories: v.optional(v.record(v.string(), v.string())),
+	dependencies: v.optional(v.record(v.string(), v.string())),
+	devDependencies: v.optional(v.record(v.string(), v.string())),
+	peerDependencies: v.optional(v.record(v.string(), v.string())),
+	peerDependenciesMeta: v.optional(v.record(v.string(), v.object({ optional: v.optional(v.boolean()) }))),
+	bundleDependencies: v.optional(v.union([v.boolean(), v.array(v.string())])),
+	optionalDependencies: v.optional(v.record(v.string(), v.string())),
+	engines: v.optional(v.record(v.string(), v.string())),
+	os: v.optional(v.array(v.string())),
+	cpu: v.optional(v.array(v.string())),
+	deprecated: v.optional(v.union([v.string(), v.boolean()])),
+	sideEffects: v.optional(v.union([v.boolean(), v.array(v.string())])),
+});
+
+export type PackageJson = v.InferOutput<typeof packageJsonSchema>;
+
+// #endregion
+
+// #region abbreviated packument schemas
 
 /**
- * package manifest for a specific version.
- * this is what you'd find in a package.json plus registry metadata.
+ * distribution metadata for a package version.
  */
-export interface PackageManifest {
-	name: string;
-	version: string;
-	description?: string;
-	license?: string;
-	main?: string;
-	module?: string;
-	exports?: PackageExports;
-	type?: 'module' | 'commonjs';
-	dependencies?: Record<string, string>;
-	devDependencies?: Record<string, string>;
-	peerDependencies?: Record<string, string>;
-	peerDependenciesMeta?: Record<string, { optional?: boolean }>;
-	optionalDependencies?: Record<string, string>;
-	dist: {
-		tarball: string;
-		integrity?: string;
-		shasum?: string;
-		/** total unpacked size in bytes */
-		unpackedSize?: number;
-		/** number of files in the tarball */
-		fileCount?: number;
-	};
-}
+const distSchema = v.object({
+	tarball: v.string(),
+	shasum: v.string(),
+	integrity: v.optional(v.string()),
+	fileCount: v.optional(v.number()),
+	unpackedSize: v.optional(v.number()),
+	signatures: v.optional(
+		v.array(
+			v.object({
+				keyid: v.string(),
+				sig: v.string(),
+			}),
+		),
+	),
+});
+
+/**
+ * abbreviated manifest for a specific version.
+ * picks installation-relevant fields from package.json and adds registry metadata.
+ * @see https://github.com/npm/registry/blob/main/docs/responses/package-metadata.md#abbreviated-metadata-format
+ */
+export const abbreviatedManifestSchema = v.object({
+	// pick installation-relevant fields from package.json
+	...v.pick(packageJsonSchema, [
+		'name',
+		'version',
+		'deprecated',
+		'dependencies',
+		'devDependencies',
+		'optionalDependencies',
+		'bundleDependencies',
+		'peerDependencies',
+		'peerDependenciesMeta',
+		'bin',
+		'directories',
+		'engines',
+		'cpu',
+		'os',
+	]).entries,
+	// registry-specific fields
+	dist: distSchema,
+	hasInstallScript: v.optional(v.boolean()),
+	_hasShrinkwrap: v.optional(v.boolean()),
+});
+
+export type AbbreviatedManifest = v.InferOutput<typeof abbreviatedManifestSchema>;
+
+/**
+ * abbreviated packument - minimal metadata for package resolution.
+ * returned when requesting with Accept: application/vnd.npm.install-v1+json
+ * @see https://github.com/npm/registry/blob/main/docs/responses/package-metadata.md#abbreviated-metadata-format
+ */
+export const abbreviatedPackumentSchema = v.object({
+	name: v.string(),
+	// optional because some registries (e.g., JSR's npm mirror) may not include it
+	modified: v.optional(v.string()),
+	'dist-tags': v.pipe(
+		v.record(v.string(), v.string()),
+		v.check((tags) => 'latest' in tags, 'dist-tags must include "latest"'),
+	),
+	versions: v.record(v.string(), abbreviatedManifestSchema),
+});
+
+export type AbbreviatedPackument = v.InferOutput<typeof abbreviatedPackumentSchema>;
+
+// #endregion
 
 /**
  * a resolved package with its dependencies.
@@ -76,10 +141,6 @@ export interface ResolvedPackage {
 	integrity?: string;
 	/** unpacked size in bytes (from registry) */
 	unpackedSize?: number;
-	/** package description */
-	description?: string;
-	/** license identifier */
-	license?: string;
 	/** resolved dependencies (name -> ResolvedPackage) */
 	dependencies: Map<string, ResolvedPackage>;
 }
@@ -122,10 +183,6 @@ export interface HoistedNode {
 	integrity?: string;
 	/** unpacked size in bytes (from registry) */
 	unpackedSize?: number;
-	/** package description */
-	description?: string;
-	/** license identifier */
-	license?: string;
 	/** number of direct dependencies */
 	dependencyCount: number;
 	/** nested node_modules for this package (when hoisting fails) */
