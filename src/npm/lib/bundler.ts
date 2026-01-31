@@ -1,4 +1,4 @@
-import { getUtf8Length } from '@atcute/uint8array';
+import { encodeUtf8, getUtf8Length } from '@atcute/uint8array';
 import { rolldown } from '@rolldown/browser';
 import { memfs } from '@rolldown/browser/experimental';
 
@@ -18,18 +18,25 @@ const VIRTUAL_ENTRY_ID = '\0virtual:entry';
  * get compressed size using a compression stream.
  */
 async function getCompressedSize(code: string, format: CompressionFormat): Promise<number> {
-	const stream = new Blob([code]).stream();
-	const compressed = stream.pipeThrough(new CompressionStream(format));
-	const reader = compressed.getReader();
+	const { readable, writable } = new CompressionStream(format);
+
+	{
+		const writer = writable.getWriter();
+		writer.write(encodeUtf8(code));
+		writer.close();
+	}
 
 	let size = 0;
-	while (true) {
-		const { done, value } = await reader.read();
-		if (done) {
-			break;
-		}
+	{
+		const reader = readable.getReader();
+		while (true) {
+			const { done, value: chunk } = await reader.read();
+			if (done) {
+				break;
+			}
 
-		size += value.byteLength;
+			size += chunk.byteLength;
+		}
 	}
 
 	return size;
@@ -114,7 +121,7 @@ async function getZstdSizeWasm(code: string): Promise<number | undefined> {
 		}
 	}
 
-	const encoded = new TextEncoder().encode(code);
+	const encoded = encodeUtf8(code);
 	const compressed = zstdWasm.compress(encoded);
 
 	return compressed.byteLength;

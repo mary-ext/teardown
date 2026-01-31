@@ -131,9 +131,9 @@ export function pickVersion(
 	}
 
 	// prefer non-deprecated versions (pnpm behavior)
-	const nonDeprecated = validVersions.filter((v) => !versions[v].deprecated);
-	if (nonDeprecated.length > 0) {
-		return versions[nonDeprecated[0]];
+	const nonDeprecated = validVersions.find((v) => !versions[v].deprecated);
+	if (nonDeprecated !== undefined) {
+		return versions[nonDeprecated];
 	}
 
 	// fall back to deprecated if no alternatives
