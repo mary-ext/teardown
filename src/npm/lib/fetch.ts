@@ -182,7 +182,7 @@ export async function fetchPackagesToVolume(
 				break;
 			}
 
-			const { node, basePath } = queue[i];
+			const { node, basePath } = queue[i]!;
 			const packagePath = `${basePath}/${node.name}`;
 
 			const extractedSize = await fetchTarballToVolume(node.tarball, packagePath, volume, exclude);

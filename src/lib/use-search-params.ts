@@ -45,7 +45,7 @@ export const useSearchParams = <T extends SearchParamsDefinition>(
 		const result: Record<string, unknown> = {};
 
 		for (const key in definition) {
-			const schema = definition[key];
+			const schema = definition[key]!;
 
 			let raw: string | string[] | undefined;
 			if (schema.type === 'array') {
@@ -58,7 +58,7 @@ export const useSearchParams = <T extends SearchParamsDefinition>(
 			if (raw === undefined) {
 				result[key] = undefined;
 			} else {
-				const parsed = v.safeParse(schema, raw);
+				const parsed = v.safeParse(schema!, raw);
 				result[key] = parsed.success ? parsed.output : undefined;
 			}
 		}
@@ -91,7 +91,7 @@ export const useSearchParams = <T extends SearchParamsDefinition>(
 				continue;
 			}
 
-			const parsed = v.safeParse(definition[key], value);
+			const parsed = v.safeParse(definition[key]!, value);
 			if (!parsed.success) {
 				result[key] = undefined;
 				continue;

@@ -87,7 +87,7 @@ export function createEventEmitter<T extends unknown[]>(): EventEmitter<T> {
 				listener.apply(this, args);
 			} else {
 				for (let idx = 0, len = listener.length; idx < len; idx++) {
-					listener[idx].apply(this, args);
+					listener[idx]!.apply(this, args);
 				}
 			}
 		},

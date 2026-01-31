@@ -106,14 +106,14 @@ function resolveColorCollisions(canonicalIndices: number[]): number[] {
 		return [];
 	}
 	if (numSegments === 1) {
-		return [canonicalIndices[0]];
+		return [canonicalIndices[0]!];
 	}
 
 	// fall back to greedy for very large inputs
 	if (numSegments > COLOR_RESOLUTION_DP_LIMIT) {
-		const resolved: number[] = [canonicalIndices[0]];
+		const resolved: number[] = [canonicalIndices[0]!];
 		for (let i = 1; i < numSegments; i++) {
-			const canonical = canonicalIndices[i];
+			const canonical = canonicalIndices[i]!;
 			resolved.push(canonical === resolved[i - 1] ? (canonical + 1) % numColors : canonical);
 		}
 		return resolved;
@@ -128,12 +128,12 @@ function resolveColorCollisions(canonicalIndices: number[]): number[] {
 
 	// base case: position 0
 	for (let c = 0; c < numColors; c++) {
-		prev[c] = c === canonicalIndices[0] ? 0 : 1;
+		prev[c] = c === canonicalIndices[0]! ? 0 : 1;
 	}
 
 	// fill DP table
 	for (let i = 1; i < numSegments; i++) {
-		const canonical = canonicalIndices[i];
+		const canonical = canonicalIndices[i]!;
 		const parentRow = Array.from({ length: numColors }, () => 0);
 
 		for (let c = 0; c < numColors; c++) {
@@ -143,14 +143,14 @@ function resolveColorCollisions(canonicalIndices: number[]): number[] {
 			let bestPrevCost = Infinity;
 			let bestPrevColor = 0;
 			for (let cp = 0; cp < numColors; cp++) {
-				if (cp !== c && prev[cp] < bestPrevCost) {
-					bestPrevCost = prev[cp];
+				if (cp !== c && prev[cp]! < bestPrevCost) {
+					bestPrevCost = prev[cp]!;
 					bestPrevColor = cp;
 				}
 			}
 
-			curr[c] = cost + bestPrevCost;
-			parentRow[c] = bestPrevColor;
+			curr[c]! = cost + bestPrevCost;
+			parentRow[c]! = bestPrevColor;
 		}
 
 		parent.push(parentRow);
@@ -160,7 +160,7 @@ function resolveColorCollisions(canonicalIndices: number[]): number[] {
 	// find best final color
 	let bestFinal = 0;
 	for (let c = 1; c < numColors; c++) {
-		if (prev[c] < prev[bestFinal]) {
+		if (prev[c]! < prev[bestFinal]!) {
 			bestFinal = c;
 		}
 	}
@@ -169,7 +169,7 @@ function resolveColorCollisions(canonicalIndices: number[]): number[] {
 	let color = bestFinal;
 	const reversed = [color];
 	for (let i = parent.length - 1; i >= 0; i--) {
-		color = parent[i][color];
+		color = parent[i]![color]!;
 		reversed.push(color);
 	}
 	return reversed.reverse();
@@ -192,7 +192,7 @@ const SizeBreakdownBar = (props: SizeBreakdownBarProps) => {
 		return sorted.map((pkg, i) => ({
 			pkg,
 			percent: (pkg.size / props.installSize) * 100,
-			color: SEGMENT_COLORS[resolvedIndices[i]],
+			color: SEGMENT_COLORS[resolvedIndices[i]!]!,
 		}));
 	});
 

@@ -82,7 +82,7 @@ export function createActiveDescendant(options?: ActiveDescendantOptions): Activ
 		if (enabled.length === 0) {
 			return null;
 		}
-		const id = enabled[0].id;
+		const id = enabled[0]!.id;
 		setActiveId(id);
 		return id;
 	};
@@ -92,7 +92,7 @@ export function createActiveDescendant(options?: ActiveDescendantOptions): Activ
 		if (enabled.length === 0) {
 			return null;
 		}
-		const id = enabled[enabled.length - 1].id;
+		const id = enabled[enabled.length - 1]!.id;
 		setActiveId(id);
 		return id;
 	};
@@ -106,7 +106,7 @@ export function createActiveDescendant(options?: ActiveDescendantOptions): Activ
 		const currentIndex = getActiveIndex();
 		// circular: wrap to first if at end or no current
 		const nextIndex = currentIndex === -1 || currentIndex >= enabled.length - 1 ? 0 : currentIndex + 1;
-		const id = enabled[nextIndex].id;
+		const id = enabled[nextIndex]!.id;
 		setActiveId(id);
 		return id;
 	};
@@ -120,7 +120,7 @@ export function createActiveDescendant(options?: ActiveDescendantOptions): Activ
 		const currentIndex = getActiveIndex();
 		// circular: wrap to last if at start or no current
 		const prevIndex = currentIndex <= 0 ? enabled.length - 1 : currentIndex - 1;
-		const id = enabled[prevIndex].id;
+		const id = enabled[prevIndex]!.id;
 		setActiveId(id);
 		return id;
 	};
@@ -146,7 +146,7 @@ export function createActiveDescendant(options?: ActiveDescendantOptions): Activ
 
 		for (let i = 0; i < enabled.length; i++) {
 			const index = (startIndex + i) % enabled.length;
-			const item = enabled[index];
+			const item = enabled[index]!;
 			const textValue = item.textValue?.toLowerCase() ?? '';
 
 			if (textValue.startsWith(searchBuffer)) {

@@ -184,7 +184,7 @@ const PackageSearchInput = (props: PackageSearchInputProps) => {
 				ev.preventDefault();
 				const idx = activeIndex();
 				if (idx >= 0 && idx < items.length) {
-					handleSelect(items[idx]);
+					handleSelect(items[idx]!);
 				} else {
 					const parsed = parsePackageSpecifier(props.value.trim());
 					if (parsed) {

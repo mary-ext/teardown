@@ -67,14 +67,14 @@ export function createRovingTabindex(options?: RovingTabindexOptions): RovingTab
 		options?.onFocusChange?.(index);
 
 		if (focus && index >= 0 && index < items.length) {
-			items[index].el.focus();
+			items[index]!.el.focus();
 		}
 	};
 
 	const getEnabledIndices = (): number[] => {
 		const indices: number[] = [];
 		for (let i = 0; i < items.length; i++) {
-			if (!items[i].disabled) {
+			if (!items[i]!.disabled) {
 				indices.push(i);
 			}
 		}
@@ -86,7 +86,7 @@ export function createRovingTabindex(options?: RovingTabindexOptions): RovingTab
 		if (enabled.length === 0) {
 			return;
 		}
-		setFocusedIndex(enabled[0]);
+		setFocusedIndex(enabled[0]!);
 	};
 
 	const last = () => {
@@ -94,7 +94,7 @@ export function createRovingTabindex(options?: RovingTabindexOptions): RovingTab
 		if (enabled.length === 0) {
 			return;
 		}
-		setFocusedIndex(enabled[enabled.length - 1]);
+		setFocusedIndex(enabled[enabled.length - 1]!);
 	};
 
 	const next = () => {
@@ -108,7 +108,7 @@ export function createRovingTabindex(options?: RovingTabindexOptions): RovingTab
 		const currentPos = enabled.indexOf(current);
 		// circular: wrap to first if at end or not found
 		const nextPos = currentPos === -1 || currentPos >= enabled.length - 1 ? 0 : currentPos + 1;
-		setFocusedIndex(enabled[nextPos]);
+		setFocusedIndex(enabled[nextPos]!);
 	};
 
 	const prev = () => {
@@ -122,7 +122,7 @@ export function createRovingTabindex(options?: RovingTabindexOptions): RovingTab
 		const currentPos = enabled.indexOf(current);
 		// circular: wrap to last if at start or not found
 		const prevPos = currentPos <= 0 ? enabled.length - 1 : currentPos - 1;
-		setFocusedIndex(enabled[prevPos]);
+		setFocusedIndex(enabled[prevPos]!);
 	};
 
 	const search = (char: string) => {
@@ -147,8 +147,8 @@ export function createRovingTabindex(options?: RovingTabindexOptions): RovingTab
 
 		for (let i = 0; i < enabled.length; i++) {
 			const pos = (startPos + i) % enabled.length;
-			const index = enabled[pos];
-			const item = items[index];
+			const index = enabled[pos]!;
+			const item = items[index]!;
 			const textValue = item.textValue?.toLowerCase() ?? item.el.textContent?.toLowerCase() ?? '';
 
 			if (textValue.startsWith(searchBuffer)) {

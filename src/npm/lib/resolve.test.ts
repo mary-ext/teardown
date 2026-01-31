@@ -415,17 +415,17 @@ describe('resolve', () => {
 			const result = await resolve(['is-odd@3.0.1']);
 
 			expect(result.roots).toHaveLength(1);
-			expect(result.roots[0].name).toBe('is-odd');
-			expect(result.roots[0].version).toBe('3.0.1');
-			expect(result.roots[0].dependencies.has('is-number')).toBe(true);
+			expect(result.roots[0]!.name).toBe('is-odd');
+			expect(result.roots[0]!.version).toBe('3.0.1');
+			expect(result.roots[0]!.dependencies.has('is-number')).toBe(true);
 		});
 
 		it('resolves multiple packages', async () => {
 			const result = await resolve(['is-odd@3.0.1', 'is-even@1.0.0']);
 
 			expect(result.roots).toHaveLength(2);
-			expect(result.roots[0].name).toBe('is-odd');
-			expect(result.roots[1].name).toBe('is-even');
+			expect(result.roots[0]!.name).toBe('is-odd');
+			expect(result.roots[1]!.name).toBe('is-even');
 		});
 
 		it('deduplicates shared dependencies', async () => {
@@ -446,18 +446,18 @@ describe('resolve', () => {
 			const result = await resolve(['jsr:@luca/flag@1.0.1']);
 
 			expect(result.roots).toHaveLength(1);
-			expect(result.roots[0].name).toBe('@luca/flag');
-			expect(result.roots[0].version).toBe('1.0.1');
-			expect(result.roots[0].tarball).toContain('npm.jsr.io');
+			expect(result.roots[0]!.name).toBe('@luca/flag');
+			expect(result.roots[0]!.version).toBe('1.0.1');
+			expect(result.roots[0]!.tarball).toContain('npm.jsr.io');
 		});
 
 		it('resolves JSR package with JSR dependencies', async () => {
 			const result = await resolve(['jsr:@std/path@1.1.4']);
 
-			expect(result.roots[0].name).toBe('@std/path');
+			expect(result.roots[0]!.name).toBe('@std/path');
 			// dependency stored under npm-compatible name, resolved to canonical
-			expect(result.roots[0].dependencies.has('@jsr/std__internal')).toBe(true);
-			const internal = result.roots[0].dependencies.get('@jsr/std__internal')!;
+			expect(result.roots[0]!.dependencies.has('@jsr/std__internal')).toBe(true);
+			const internal = result.roots[0]!.dependencies.get('@jsr/std__internal')!;
 			expect(internal.name).toBe('@std/internal');
 			expect(internal.tarball).toContain('npm.jsr.io');
 		});
@@ -467,7 +467,7 @@ describe('resolve', () => {
 		it('auto-installs required peer dependencies', async () => {
 			const result = await resolve(['use-sync-external-store@1.2.0']);
 
-			const mainPkg = result.roots[0];
+			const mainPkg = result.roots[0]!;
 			expect(mainPkg.dependencies.has('react')).toBe(true);
 			expect(Array.from(result.packages.values()).some((p) => p.name === 'react')).toBe(true);
 		});
@@ -476,7 +476,7 @@ describe('resolve', () => {
 			const result = await resolve(['use-sync-external-store@1.2.0']);
 
 			// react is required, should be present
-			const mainPkg = result.roots[0];
+			const mainPkg = result.roots[0]!;
 			expect(mainPkg.dependencies.has('react')).toBe(true);
 		});
 
@@ -484,7 +484,7 @@ describe('resolve', () => {
 			const result = await resolve(['use-sync-external-store@1.2.0'], { installPeers: false });
 
 			expect(result.roots).toHaveLength(1);
-			expect(result.roots[0].name).toBe('use-sync-external-store');
+			expect(result.roots[0]!.name).toBe('use-sync-external-store');
 		});
 	});
 });

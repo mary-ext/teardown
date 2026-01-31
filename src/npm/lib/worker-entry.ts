@@ -58,7 +58,7 @@ async function handleInit(id: number, packageSpec: string, options: InitOptions 
 
 		await fetchPackagesToVolume(hoisted, volume, options.fetch);
 
-		const mainPackage = resolution.roots[0];
+		const mainPackage = resolution.roots[0]!;
 		const pkgJsonPath = `/node_modules/${mainPackage.name}/package.json`;
 		const pkgJsonContent = volume.readFileSync(pkgJsonPath, 'utf8') as string;
 		const manifest = JSON.parse(pkgJsonContent) as PackageJson;
@@ -71,7 +71,7 @@ async function handleInit(id: number, packageSpec: string, options: InitOptions 
 		const peerDependencies = Object.keys(manifest.peerDependencies ?? {});
 		const peerDepNames = new Set(peerDependencies);
 
-		const packages = buildInstalledPackages(mainPackage, peerDepNames);
+		const packages = buildInstalledPackages(mainPackage!, peerDepNames);
 		const installSize = packages.reduce((sum, pkg) => sum + pkg.size, 0);
 
 		initResult = {

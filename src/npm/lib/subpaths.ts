@@ -115,13 +115,15 @@ function expandWildcard(subpath: string, target: string, packagePath: string, vo
 		return entries;
 	}
 
-	const [prefix, suffix] = targetParts;
+	const prefix = targetParts[0]!;
+	const suffix = targetParts[1]!;
 	const subpathParts = subpath.split('*');
 	if (subpathParts.length !== 2) {
 		return entries;
 	}
 
-	const [subpathPrefix, subpathSuffix] = subpathParts;
+	const subpathPrefix = subpathParts[0]!;
+	const subpathSuffix = subpathParts[1]!;
 
 	// normalize the prefix to match volume paths
 	// target like "./src/*.js" becomes "/node_modules/pkg/src"
@@ -270,7 +272,7 @@ export function discoverSubpaths(packageJson: PackageJson, volume: Volume): Disc
 	} else if (entries.length > 0) {
 		// otherwise, pick first alphabetically
 		entries.sort((a, b) => a.subpath.localeCompare(b.subpath));
-		defaultSubpath = entries[0].subpath;
+		defaultSubpath = entries[0]!.subpath;
 	}
 
 	return {

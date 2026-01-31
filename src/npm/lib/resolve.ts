@@ -85,12 +85,12 @@ export function pickVersion(
 ): AbbreviatedManifest | null {
 	// empty range means latest
 	if (range === '') {
-		return versions[distTags.latest] ?? null;
+		return versions[distTags.latest!] ?? null;
 	}
 
 	// check if range is a dist-tag
 	if (range in distTags) {
-		const taggedVersion = distTags[range];
+		const taggedVersion = distTags[range]!;
 		return versions[taggedVersion] ?? null;
 	}
 
@@ -131,13 +131,13 @@ export function pickVersion(
 	}
 
 	// prefer non-deprecated versions (pnpm behavior)
-	const nonDeprecated = validVersions.find((v) => !versions[v].deprecated);
+	const nonDeprecated = validVersions.find((v) => !versions[v]!.deprecated);
 	if (nonDeprecated !== undefined) {
-		return versions[nonDeprecated];
+		return versions[nonDeprecated]!;
 	}
 
 	// fall back to deprecated if no alternatives
-	return versions[validVersions[0]];
+	return versions[validVersions[0]!]!;
 }
 
 /**

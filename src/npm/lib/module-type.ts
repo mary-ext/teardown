@@ -174,8 +174,8 @@ function checkCjsExpression(expr: Expression): string[] | null {
 				if (prop.type === 'Identifier' && prop.name === 'defineProperty') {
 					const args = expr.arguments;
 					if (args.length >= 2) {
-						const target = args[0];
-						const propArg = args[1];
+						const target = args[0]!;
+						const propArg = args[1]!;
 
 						if (
 							target.type !== 'SpreadElement' &&

@@ -25,7 +25,7 @@ export const parsePackageSpecifier = (input: string): ParsedPackageSpecifier | n
 	}
 	return {
 		registry: (match[1] as Registry) ?? 'npm',
-		name: match[2],
+		name: match[2]!,
 		range: match[3] ?? 'latest',
 	};
 };
