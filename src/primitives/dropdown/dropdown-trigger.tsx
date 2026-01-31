@@ -31,7 +31,7 @@ export interface DropdownTriggerProps {
 
 // #region styles
 
-const rootBaseStyles = tw`inline-flex w-full items-center justify-between bg-neutral-background-1 text-left align-middle outline-2 -outline-offset-2 outline-transparent transition duration-100 select-none`;
+const rootBaseStyles = tw`inline-flex w-full min-w-0 items-center justify-between bg-neutral-background-1 text-left align-middle outline-2 -outline-offset-2 outline-transparent transition duration-100 select-none`;
 
 const rootSizeStyles: Record<DropdownSize, string> = {
 	small: tw`min-h-6 gap-2 px-2 text-base-200`,

@@ -1,4 +1,4 @@
-import { autoUpdate, computePosition, flip, offset, shift } from '@floating-ui/dom';
+import { autoUpdate, computePosition, flip, offset, shift, size } from '@floating-ui/dom';
 import { createEffect, onCleanup, onMount, type JSX } from 'solid-js';
 import { Portal } from 'solid-js/web';
 
@@ -37,7 +37,19 @@ const DropdownListbox = (props: DropdownListboxProps) => {
 										const { x, y } = await computePosition(trigger, el, {
 											placement: 'bottom-start',
 											strategy: 'absolute',
-											middleware: [offset(4), flip(), shift({ padding: 8 })],
+											middleware: [
+												offset(4),
+												flip(),
+												shift({ padding: 8 }),
+												size({
+													padding: 8,
+													apply({ availableWidth }) {
+														Object.assign(el.style, {
+															maxWidth: `${availableWidth}px`,
+														});
+													},
+												}),
+											],
 										});
 
 										Object.assign(el.style, {

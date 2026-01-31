@@ -81,7 +81,7 @@ const DropdownOption = (props: DropdownOptionProps) => {
 			aria-disabled={props.disabled}
 			onClick={handleClick}
 			onMouseMove={handleMouseMove}
-			class="box-border flex min-h-8 items-center gap-1 rounded-md px-2 py-1.5 text-base-300 outline-none select-none"
+			class="box-border flex min-h-8 shrink-0 items-center gap-1 rounded-md px-2 py-1.5 text-base-300 outline-none select-none"
 			classList={{
 				'text-neutral-foreground-disabled cursor-not-allowed': props.disabled,
 				'text-neutral-foreground-2 hover:text-neutral-foreground-2-hover active:bg-neutral-background-1-pressed':
@@ -97,7 +97,7 @@ const DropdownOption = (props: DropdownOptionProps) => {
 			</span>
 
 			{/* content */}
-			<span class="grow">{props.children}</span>
+			<span class="min-w-0 grow wrap-break-word">{props.children}</span>
 		</div>
 	);
 };
