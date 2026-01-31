@@ -149,7 +149,9 @@ function resolveColorCollisions(canonicalIndices: number[]): number[] {
 				}
 			}
 
+			// oxlint-disable-next-line typescript/no-confusing-non-null-assertion
 			curr[c]! = cost + bestPrevCost;
+			// oxlint-disable-next-line typescript/no-confusing-non-null-assertion
 			parentRow[c]! = bestPrevColor;
 		}
 
@@ -172,7 +174,7 @@ function resolveColorCollisions(canonicalIndices: number[]): number[] {
 		color = parent[i]![color]!;
 		reversed.push(color);
 	}
-	return reversed.reverse();
+	return reversed.toReversed();
 }
 
 interface SizeBreakdownBarProps {
@@ -183,7 +185,7 @@ interface SizeBreakdownBarProps {
 const SizeBreakdownBar = (props: SizeBreakdownBarProps) => {
 	const segments = createMemo(() => {
 		// sort by size descending for the bar
-		const sorted = [...props.packages].sort((a, b) => b.size - a.size);
+		const sorted = [...props.packages].toSorted((a, b) => b.size - a.size);
 
 		// compute canonical colors, then resolve adjacent collisions
 		const canonicalIndices = sorted.map((pkg) => getCanonicalColorIndex(pkg.name));
@@ -312,7 +314,7 @@ const PackageDependencies = (props: PackageDependenciesProps) => {
 			result = [...result];
 		}
 
-		return [...result].sort(sortConfig.compare);
+		return [...result].toSorted(sortConfig.compare);
 	});
 
 	return (

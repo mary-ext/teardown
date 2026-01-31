@@ -132,6 +132,10 @@ export type WorkerRequest = v.InferOutput<typeof workerRequestSchema>;
 
 // #region response schemas (main thread parses these)
 
+const readyResponseSchema = v.object({
+	type: v.literal('ready'),
+});
+
 const initResponseSchema = v.object({
 	id: v.number(),
 	type: v.literal('init'),
@@ -177,6 +181,7 @@ const progressResponseSchema = v.variant('kind', [
 export type ProgressMessage = v.InferOutput<typeof progressResponseSchema>;
 
 export const workerResponseSchema = v.variant('type', [
+	readyResponseSchema,
 	initResponseSchema,
 	bundleResponseSchema,
 	errorResponseSchema,

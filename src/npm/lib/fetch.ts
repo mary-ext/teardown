@@ -185,6 +185,7 @@ export async function fetchPackagesToVolume(
 			const { node, basePath } = queue[i]!;
 			const packagePath = `${basePath}/${node.name}`;
 
+			// oxlint-disable-next-line no-await-in-loop
 			const extractedSize = await fetchTarballToVolume(node.tarball, packagePath, volume, exclude);
 
 			// use extracted size if registry didn't provide unpackedSize (e.g., JSR packages)

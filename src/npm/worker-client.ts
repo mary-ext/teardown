@@ -43,13 +43,6 @@ export class BundlerWorker {
 	}
 
 	private handleMessage(event: MessageEvent<unknown>): void {
-		// check for ready signal
-		if (event.data && typeof event.data === 'object' && 'type' in event.data && event.data.type === 'ready') {
-			console.log('[worker-client] received ready signal');
-			this.resolveReady();
-			return;
-		}
-
 		const parsed = v.safeParse(workerResponseSchema, event.data);
 		if (!parsed.success) {
 			console.error('[worker-client] invalid response:', parsed.issues, event.data);
@@ -57,6 +50,12 @@ export class BundlerWorker {
 		}
 
 		const response = parsed.output;
+
+		if (response.type === 'ready') {
+			console.log('[worker-client] received ready signal');
+			this.resolveReady();
+			return;
+		}
 
 		// forward progress messages to global emitter
 		if (response.type === 'progress') {

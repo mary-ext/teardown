@@ -23,7 +23,7 @@ const { volume } = memfs!;
 
 // forward progress events to main thread
 progress.listen((msg) => {
-	self.postMessage(msg satisfies WorkerResponse);
+	self.postMessage(msg);
 });
 
 // #region state
@@ -44,12 +44,6 @@ let pendingBundleRequest: {
 // #region handlers
 
 async function handleInit(id: number, packageSpec: string, options: InitOptions = {}): Promise<void> {
-	// if already initialized, return cached result
-	if (initResult !== null) {
-		self.postMessage({ id, type: 'init', result: initResult } satisfies WorkerResponse);
-		return;
-	}
-
 	try {
 		volume.reset();
 
@@ -83,10 +77,23 @@ async function handleInit(id: number, packageSpec: string, options: InitOptions 
 			peerDependencies,
 		};
 
-		self.postMessage({ id, type: 'init', result: initResult } satisfies WorkerResponse);
+		const event = {
+			id,
+			type: 'init',
+			result: initResult,
+		} satisfies WorkerResponse;
+
+		self.postMessage(event);
 	} catch (error) {
 		console.error('[worker] init error:', error);
-		self.postMessage({ id, type: 'error', error: stripAnsi(String(error)) } satisfies WorkerResponse);
+
+		const event = {
+			id,
+			type: 'error',
+			error: stripAnsi(String(error)),
+		} satisfies WorkerResponse;
+
+		self.postMessage(event);
 	}
 }
 
@@ -97,11 +104,13 @@ async function handleBundle(
 	options: BundleOptions = {},
 ): Promise<void> {
 	if (!packageName) {
-		self.postMessage({
+		const event = {
 			id,
 			type: 'error',
 			error: 'not initialized - call init() first',
-		} satisfies WorkerResponse);
+		} satisfies WorkerResponse;
+
+		self.postMessage(event);
 		return;
 	}
 
@@ -109,11 +118,13 @@ async function handleBundle(
 	if (bundleInProgress) {
 		// reject the previous pending request if any
 		if (pendingBundleRequest) {
-			self.postMessage({
+			const event = {
 				id: pendingBundleRequest.id,
 				type: 'error',
 				error: 'Superseded by newer request',
-			} satisfies WorkerResponse);
+			} satisfies WorkerResponse;
+
+			self.postMessage(event);
 		}
 		pendingBundleRequest = { id, subpath, selectedExports, options };
 		return;
@@ -172,6 +183,6 @@ self.onmessage = (event: MessageEvent<unknown>) => {
 };
 
 // signal to main thread that we're ready
-self.postMessage({ type: 'ready' });
+self.postMessage({ type: 'ready' } satisfies WorkerResponse);
 
 // #endregion

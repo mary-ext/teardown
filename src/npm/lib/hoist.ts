@@ -38,6 +38,21 @@ function tryPlaceAtRoot(root: Map<string, HoistedNode>, pkg: ResolvedPackage): b
 }
 
 /**
+ * creates a hoisted node from a resolved package.
+ */
+function createNode(pkg: ResolvedPackage): HoistedNode {
+	return {
+		name: pkg.name,
+		version: pkg.version,
+		tarball: pkg.tarball,
+		integrity: pkg.integrity,
+		unpackedSize: pkg.unpackedSize,
+		dependencyCount: pkg.dependencies.size,
+		nested: new Map(),
+	};
+}
+
+/**
  * hoists dependencies as high as possible in the tree.
  * follows npm's placement algorithm:
  * 1. explicitly requested (root) packages always get placed at root
@@ -63,21 +78,6 @@ export function hoist(roots: ResolvedPackage[]): HoistedResult {
 	const rootPackageVersions = new Map<string, string>();
 	for (const pkg of roots) {
 		rootPackageVersions.set(pkg.name, pkg.version);
-	}
-
-	/**
-	 * creates a hoisted node from a resolved package.
-	 */
-	function createNode(pkg: ResolvedPackage): HoistedNode {
-		return {
-			name: pkg.name,
-			version: pkg.version,
-			tarball: pkg.tarball,
-			integrity: pkg.integrity,
-			unpackedSize: pkg.unpackedSize,
-			dependencyCount: pkg.dependencies.size,
-			nested: new Map(),
-		};
 	}
 
 	/**
@@ -164,5 +164,6 @@ export function hoistedToPaths(result: HoistedResult): string[] {
 	}
 
 	walk(result.root, 'node_modules');
+	// oxlint-disable-next-line unicorn/no-array-sort
 	return paths.sort();
 }

@@ -124,6 +124,7 @@ export function pickVersion(
 	// find all versions satisfying the range
 	const validVersions = Object.keys(versions)
 		.filter((v) => semver.satisfies(v, cleanedRange, satisfiesOptions))
+		// oxlint-disable-next-line unicorn/no-array-sort
 		.sort(semver.rcompare);
 
 	if (validVersions.length === 0) {

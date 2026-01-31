@@ -30,6 +30,7 @@ async function getCompressedSize(code: string, format: CompressionFormat): Promi
 	{
 		const reader = readable.getReader();
 		while (true) {
+			// oxlint-disable-next-line no-await-in-loop
 			const { done, value: chunk } = await reader.read();
 			if (done) {
 				break;

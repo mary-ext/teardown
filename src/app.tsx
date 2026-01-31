@@ -53,6 +53,7 @@ function App() {
 
 	const recs = sample(RECOMMENDATIONS, 6)
 		.flatMap((v) => (Array.isArray(v) ? sampleOne(v) : v))
+		// oxlint-disable-next-line unicorn/no-array-sort
 		.sort();
 
 	return (

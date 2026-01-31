@@ -396,7 +396,7 @@ describe('hoist', () => {
 			const result = hoist([a]);
 			const paths = hoistedToPaths(result);
 
-			expect(paths).toEqual([...paths].sort());
+			expect(paths).toEqual(paths.toSorted());
 		});
 
 		it('includes nested paths with full hierarchy', () => {
