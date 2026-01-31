@@ -143,27 +143,3 @@ export function hoist(roots: ResolvedPackage[]): HoistedResult {
 	return { root };
 }
 
-/**
- * converts a hoisted result to a flat list of paths.
- * useful for debugging and testing.
- *
- * @param result the hoisted result
- * @returns array of paths like ["node_modules/react", "node_modules/react/node_modules/scheduler"]
- */
-export function hoistedToPaths(result: HoistedResult): string[] {
-	const paths: string[] = [];
-
-	function walk(nodes: Map<string, HoistedNode>, prefix: string): void {
-		for (const [name, node] of nodes) {
-			const path = `${prefix}/${name}`;
-			paths.push(path);
-			if (node.nested.size > 0) {
-				walk(node.nested, `${path}/node_modules`);
-			}
-		}
-	}
-
-	walk(result.root, 'node_modules');
-	// oxlint-disable-next-line unicorn/no-array-sort
-	return paths.sort();
-}

@@ -281,21 +281,4 @@ export function discoverSubpaths(packageJson: PackageJson, volume: Volume): Disc
 	};
 }
 
-/**
- * gets the import specifier for a subpath entry.
- * this is what you'd write in an import statement.
- *
- * @param packageName the package name
- * @param entry the subpath entry
- * @returns the import specifier (e.g., "react", "react/jsx-runtime")
- */
-export function getImportSpecifier(packageName: string, entry: Subpath): string {
-	if (entry.subpath === '.') {
-		return packageName;
-	}
-
-	// "./foo" -> "package/foo"
-	return `${packageName}${entry.subpath.slice(1)}`;
-}
-
 // #endregion

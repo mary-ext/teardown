@@ -101,11 +101,3 @@ export async function fetchPackument(
 	packumentCache.set(cacheKey, packument);
 	return packument;
 }
-
-/**
- * clears the packument cache.
- * useful for testing or when you want fresh data.
- */
-export function clearPackumentCache(): void {
-	packumentCache.clear();
-}

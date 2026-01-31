@@ -1,7 +1,25 @@
 import { describe, expect, it } from 'vitest';
 
-import { hoist, hoistedToPaths } from './hoist';
-import type { ResolvedPackage } from './types';
+import { hoist } from './hoist';
+import type { HoistedNode, HoistedResult, ResolvedPackage } from './types';
+
+/** converts hoisted result to flat paths for easy testing. */
+function hoistedToPaths(result: HoistedResult): string[] {
+	const paths: string[] = [];
+
+	function walk(nodes: Map<string, HoistedNode>, prefix: string): void {
+		for (const [name, node] of nodes) {
+			const path = `${prefix}/${name}`;
+			paths.push(path);
+			if (node.nested.size > 0) {
+				walk(node.nested, `${path}/node_modules`);
+			}
+		}
+	}
+
+	walk(result.root, 'node_modules');
+	return paths.sort();
+}
 
 // #region test helpers
 
