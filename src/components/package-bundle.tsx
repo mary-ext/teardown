@@ -195,7 +195,7 @@ const PackageBundle = (props: PackageBundleProps) => {
 					{(bundleData) => (
 						<div class="flex flex-col gap-5">
 							{/* size display card */}
-							<div class="flex flex-wrap items-stretch gap-8 rounded-lg border border-neutral-stroke-3 bg-neutral-background-1 p-4">
+							<div class="sticky top-1 flex flex-wrap items-stretch gap-4 rounded-lg border border-neutral-stroke-3 bg-neutral-background-1 px-4 py-3">
 								<SizeStat label="Minified" size={bundleData().size} />
 
 								<SizeStat label="Gzip" size={bundleData().gzipSize} />
