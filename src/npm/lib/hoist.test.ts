@@ -190,9 +190,9 @@ describe('hoist', () => {
 			const paths = hoistedToPaths(result);
 
 			expect(result.root.get('C')?.version).toBe('2.0.0');
-			expect(
-				paths.some((p) => p.includes('/B/node_modules/C') || p.includes('/A/node_modules/C')),
-			).toBe(true);
+			expect(paths.some((p) => p.includes('/B/node_modules/C') || p.includes('/A/node_modules/C'))).toBe(
+				true,
+			);
 		});
 	});
 

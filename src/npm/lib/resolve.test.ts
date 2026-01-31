@@ -356,9 +356,7 @@ describe('pickVersion', () => {
 				'1.0.0-alpha.1': manifest('1.0.0-alpha.1'),
 				'1.0.0': manifest('1.0.0'),
 			};
-			expect(pickVersion(versions, { latest: '1.0.0' }, '>=1.0.0-alpha.1')?.version).toBe(
-				'1.0.0',
-			);
+			expect(pickVersion(versions, { latest: '1.0.0' }, '>=1.0.0-alpha.1')?.version).toBe('1.0.0');
 		});
 
 		it('matches explicit prerelease version', () => {
@@ -366,9 +364,7 @@ describe('pickVersion', () => {
 				'1.0.0-beta.1': manifest('1.0.0-beta.1'),
 				'1.0.0-beta.2': manifest('1.0.0-beta.2'),
 			};
-			expect(pickVersion(versions, { latest: '1.0.0-beta.2' }, '1.0.0-beta.1')?.version).toBe(
-				'1.0.0-beta.1',
-			);
+			expect(pickVersion(versions, { latest: '1.0.0-beta.2' }, '1.0.0-beta.1')?.version).toBe('1.0.0-beta.1');
 		});
 
 		it('matches prerelease range correctly', () => {
@@ -388,9 +384,7 @@ describe('pickVersion', () => {
 				'1.0.0-beta.1': manifest('1.0.0-beta.1'),
 				'1.0.0-rc.1': manifest('1.0.0-rc.1'),
 			};
-			expect(
-				pickVersion(versions, { latest: '1.0.0-rc.1' }, '>=1.0.0-alpha.1')?.version,
-			).toBe('1.0.0-rc.1');
+			expect(pickVersion(versions, { latest: '1.0.0-rc.1' }, '>=1.0.0-alpha.1')?.version).toBe('1.0.0-rc.1');
 		});
 
 		it('uses latest tag with wildcard when all versions are prerelease', () => {
@@ -399,18 +393,14 @@ describe('pickVersion', () => {
 				'1.0.0-beta.1': manifest('1.0.0-beta.1'),
 			};
 			// * with all prereleases should respect latest tag (pnpm/npm behavior)
-			expect(pickVersion(versions, { latest: '1.0.0-alpha.1' }, '*')?.version).toBe(
-				'1.0.0-alpha.1',
-			);
+			expect(pickVersion(versions, { latest: '1.0.0-alpha.1' }, '*')?.version).toBe('1.0.0-alpha.1');
 		});
 
 		it('picks prerelease with wildcard when only prereleases exist', () => {
 			const versions = {
 				'1.0.0-alpha.1': manifest('1.0.0-alpha.1'),
 			};
-			expect(pickVersion(versions, { latest: '1.0.0-alpha.1' }, '*')?.version).toBe(
-				'1.0.0-alpha.1',
-			);
+			expect(pickVersion(versions, { latest: '1.0.0-alpha.1' }, '*')?.version).toBe('1.0.0-alpha.1');
 		});
 	});
 });

@@ -21,10 +21,7 @@ describe('fetchPackagesToVolume', () => {
 			expect(json.name).toBe('is-odd');
 
 			// verify dependency (is-number)
-			const isNumberPackageJson = volume.readFileSync(
-				'/node_modules/is-number/package.json',
-				'utf8',
-			);
+			const isNumberPackageJson = volume.readFileSync('/node_modules/is-number/package.json', 'utf8');
 			expect(isNumberPackageJson).toBeDefined();
 		});
 
@@ -45,10 +42,7 @@ describe('fetchPackagesToVolume', () => {
 			const volume = new Volume();
 			await fetchPackagesToVolume(hoisted, volume);
 
-			const packageJson = volume.readFileSync(
-				'/node_modules/@babel/parser/package.json',
-				'utf8',
-			);
+			const packageJson = volume.readFileSync('/node_modules/@babel/parser/package.json', 'utf8');
 			const json = JSON.parse(packageJson as string);
 			expect(json.name).toBe('@babel/parser');
 		});
@@ -69,9 +63,7 @@ describe('fetchPackagesToVolume', () => {
 
 			// is-number@6 nested under is-odd
 			const files = volume.toJSON();
-			const nestedIsNumber = Object.keys(files).find((p) =>
-				p.includes('/is-odd/node_modules/is-number/'),
-			);
+			const nestedIsNumber = Object.keys(files).find((p) => p.includes('/is-odd/node_modules/is-number/'));
 			expect(nestedIsNumber).toBeDefined();
 		});
 	});
@@ -222,9 +214,7 @@ describe('DEFAULT_EXCLUDE_PATTERNS', () => {
 		});
 
 		it('matches dot directories', () => {
-			expect(DEFAULT_EXCLUDE_PATTERNS.some((p) => p.test('.github/workflows/ci.yml'))).toBe(
-				true,
-			);
+			expect(DEFAULT_EXCLUDE_PATTERNS.some((p) => p.test('.github/workflows/ci.yml'))).toBe(true);
 			expect(DEFAULT_EXCLUDE_PATTERNS.some((p) => p.test('.vscode/settings.json'))).toBe(true);
 		});
 	});
