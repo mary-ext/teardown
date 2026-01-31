@@ -62,62 +62,61 @@ const MenuPopover = (props: MenuPopoverProps) => {
 					<div
 						ref={(el) => {
 							ctx.setPopoverRef(el);
+							onCleanup(() => {
+								ctx.setPopoverRef(null);
+							});
 
 							onMount(() => {
 								// focus first item after items are registered
 								requestAnimationFrame(() => {
 									ctx.rovingTabindex.first();
 								});
+							});
 
-								createEffect(() => {
-									const trigger = ctx.triggerRef();
-									if (!trigger) {
-										return;
-									}
-
-									const placement = ctx.placement();
-
-									const updatePosition = async () => {
-										const { x, y } = await computePosition(trigger, el, {
-											placement: placement,
-											strategy: 'absolute',
-											middleware: [offset(4), flip(), shift({ padding: 8 })],
-										});
-
-										Object.assign(el.style, {
-											position: 'absolute',
-											left: `${x}px`,
-											top: `${y}px`,
-										});
-									};
-
-									onCleanup(autoUpdate(trigger, el, updatePosition));
-								});
-
-								{
-									// handle click outside to close
-									const handleClickOutside = (ev: MouseEvent) => {
-										const currentTrigger = ctx.triggerRef();
-										if (
-											!el.contains(ev.target as Node) &&
-											currentTrigger &&
-											!currentTrigger.contains(ev.target as Node)
-										) {
-											ctx.setOpen(false);
-										}
-									};
-
-									document.addEventListener('mousedown', handleClickOutside);
-
-									onCleanup(() => {
-										document.removeEventListener('mousedown', handleClickOutside);
-									});
+							createEffect(() => {
+								const trigger = ctx.triggerRef();
+								if (!trigger) {
+									return;
 								}
+
+								const placement = ctx.placement();
+
+								const updatePosition = async () => {
+									const { x, y } = await computePosition(trigger, el, {
+										placement: placement,
+										strategy: 'absolute',
+										middleware: [offset(4), flip(), shift({ padding: 8 })],
+									});
+
+									Object.assign(el.style, {
+										position: 'absolute',
+										left: `${x}px`,
+										top: `${y}px`,
+									});
+								};
+
+								onCleanup(autoUpdate(trigger, el, updatePosition));
 							});
 
-							onCleanup(() => {
-								ctx.setPopoverRef(null);
-							});
+							{
+								// handle click outside to close
+								const handleClickOutside = (ev: MouseEvent) => {
+									const currentTrigger = ctx.triggerRef();
+									if (
+										!el.contains(ev.target as Node) &&
+										currentTrigger &&
+										!currentTrigger.contains(ev.target as Node)
+									) {
+										ctx.setOpen(false);
+									}
+								};
+
+								document.addEventListener('mousedown', handleClickOutside);
+
+								onCleanup(() => {
+									document.removeEventListener('mousedown', handleClickOutside);
+								});
+							}
 						}}
 						id={ctx.menuId}
 						role="menu"

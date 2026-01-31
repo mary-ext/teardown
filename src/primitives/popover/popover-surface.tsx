@@ -1,5 +1,5 @@
 import { autoUpdate, computePosition, flip, offset, shift } from '@floating-ui/dom';
-import { createEffect, onCleanup, onMount, type JSX } from 'solid-js';
+import { createEffect, onCleanup, type JSX } from 'solid-js';
 import { Portal } from 'solid-js/web';
 
 import { usePopoverContext } from './context';
@@ -39,71 +39,69 @@ const PopoverSurface = (props: PopoverSurfaceProps) => {
 					<div
 						ref={(el) => {
 							ctx.setSurfaceRef(el);
-
-							onMount(() => {
-								createEffect(() => {
-									const trigger = ctx.triggerRef();
-									if (!trigger) {
-										return;
-									}
-
-									const placement = ctx.placement();
-
-									const updatePosition = async () => {
-										const { x, y } = await computePosition(trigger, el, {
-											placement: placement,
-											strategy: 'absolute',
-											middleware: [offset(4), flip(), shift({ padding: 8 })],
-										});
-
-										Object.assign(el.style, {
-											position: 'absolute',
-											left: `${x}px`,
-											top: `${y}px`,
-										});
-									};
-
-									onCleanup(autoUpdate(trigger, el, updatePosition));
-								});
-
-								{
-									// handle click outside to close (only in click mode)
-									const handleClickOutside = (ev: MouseEvent) => {
-										if (ctx.openOnHover()) {
-											return;
-										}
-										const currentTrigger = ctx.triggerRef();
-										if (
-											!el.contains(ev.target as Node) &&
-											currentTrigger &&
-											!currentTrigger.contains(ev.target as Node)
-										) {
-											ctx.setOpen(false, 'clickoutside');
-										}
-									};
-
-									// handle escape key to close
-									const handleKeyDown = (ev: KeyboardEvent) => {
-										if (ev.key === 'Escape') {
-											ev.preventDefault();
-											ctx.setOpen(false, 'escape');
-											ctx.triggerRef()?.focus();
-										}
-									};
-
-									document.addEventListener('mousedown', handleClickOutside);
-									document.addEventListener('keydown', handleKeyDown);
-
-									onCleanup(() => {
-										document.removeEventListener('mousedown', handleClickOutside);
-										document.removeEventListener('keydown', handleKeyDown);
-									});
-								}
-							});
-
 							onCleanup(() => {
 								ctx.setSurfaceRef(null);
 							});
+
+							createEffect(() => {
+								const trigger = ctx.triggerRef();
+								if (!trigger) {
+									return;
+								}
+
+								const placement = ctx.placement();
+
+								const updatePosition = async () => {
+									const { x, y } = await computePosition(trigger, el, {
+										placement: placement,
+										strategy: 'absolute',
+										middleware: [offset(4), flip(), shift({ padding: 8 })],
+									});
+
+									Object.assign(el.style, {
+										position: 'absolute',
+										left: `${x}px`,
+										top: `${y}px`,
+									});
+								};
+
+								onCleanup(autoUpdate(trigger, el, updatePosition));
+							});
+
+							{
+								// handle click outside to close (only in click mode)
+								const handleClickOutside = (ev: MouseEvent) => {
+									if (ctx.openOnHover()) {
+										return;
+									}
+
+									const currentTrigger = ctx.triggerRef();
+									if (
+										!el.contains(ev.target as Node) &&
+										currentTrigger &&
+										!currentTrigger.contains(ev.target as Node)
+									) {
+										ctx.setOpen(false, 'clickoutside');
+									}
+								};
+
+								// handle escape key to close
+								const handleKeyDown = (ev: KeyboardEvent) => {
+									if (ev.key === 'Escape') {
+										ev.preventDefault();
+										ctx.setOpen(false, 'escape');
+										ctx.triggerRef()?.focus();
+									}
+								};
+
+								document.addEventListener('mousedown', handleClickOutside);
+								document.addEventListener('keydown', handleKeyDown);
+
+								onCleanup(() => {
+									document.removeEventListener('mousedown', handleClickOutside);
+									document.removeEventListener('keydown', handleKeyDown);
+								});
+							}
 						}}
 						id={ctx.surfaceId}
 						role="dialog"
