@@ -4,8 +4,6 @@ import type { DiscoveredSubpaths, Subpath } from '../types';
 
 import type { PackageExports, PackageJson } from './types';
 
-export type { DiscoveredSubpaths, Subpath };
-
 // #region condition resolution
 
 /**
