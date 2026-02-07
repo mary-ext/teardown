@@ -67,28 +67,3 @@ teardown is a bundlephobia alternative built with @rolldown/browser, using Vite 
 
 - Explore tool (subagents for exploration, planning, etc.) may not always be accurate; verify
   subagent findings when needed
-
-### cgr
-
-use `@oomfware/cgr` to ask questions about external repositories.
-
-```
-npx @oomfware/cgr ask [options] <repo>[#branch] <question>
-
-options:
-  -m, --model <model>   model to use: opus, sonnet, haiku (default: haiku)
-  -d, --deep            clone full history (enables git log/blame/show)
-  -w, --with <repo>     additional repository to include, supports #branch (repeatable)
-```
-
-useful repositories:
-
-- `github.com/rolldown/rolldown` for Rolldown bundler, @rolldown/browser API
-- `github.com/solidjs/solid` for Solid.js core reactivity and components
-- `github.com/vitejs/vite` for Vite dev server, build tooling, plugin API
-- `github.com/oxc-project/oxc` for Oxlint linter, Oxfmt formatter
-
-cgr works best with detailed questions. include file/folder paths when you know them, and reference
-details from previous answers in follow-ups.
-
-run `npx @oomfware/cgr --help` for more options.
