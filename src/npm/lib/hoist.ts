@@ -142,4 +142,3 @@ export function hoist(roots: ResolvedPackage[]): HoistedResult {
 
 	return { root };
 }
-
