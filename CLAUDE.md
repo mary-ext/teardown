@@ -4,7 +4,7 @@ teardown is a bundlephobia alternative built with @rolldown/browser, using Vite 
 
 ### project management
 
-- pnpm is managed by mise, to run commands, use `mise exec -- pnpm ...`
+- Node.js and pnpm is managed by mise
 - install dependencies with `pnpm install`
 - run dev server with `pnpm dev`
 - build with `pnpm build`
