@@ -9,10 +9,10 @@
 	"singleQuote": true,
 	"bracketSpacing": true,
 
-	"experimentalSortImports": {
+	"sortImports": {
 		"groups": [["builtin"], ["external"], ["parent"], ["sibling", "index"]]
 	},
-	"experimentalTailwindcss": {
+	"sortTailwindcss": {
 		"stylesheet": "src/index.css",
 		"functions": ["tw", "clsx"],
 		"attributes": ["class", "className", "classList"]

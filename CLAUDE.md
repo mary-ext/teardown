@@ -18,22 +18,21 @@ teardown is a bundlephobia alternative built with @rolldown/browser, using Vite 
 
 - new files should be in kebab-case
 - use tabs for indentation, spaces allowed for diagrams in comments
-- use single quotes and add trailing commas
+- use single quotes for strings; use template literals for localization strings (user-facing
+  strings, error messages)
+- add trailing commas
 - prefer arrow functions, but use regular methods in classes unless arrow functions are necessary
   (e.g., when passing the method as a callback that needs `this` binding)
 - use braces for control statements, even single-line bodies
 - use bare blocks `{ }` to group related code and limit variable scope
-- use template literals for user-facing strings and error messages
 - avoid barrel exports (index files that re-export from other modules); import directly from source
 - use `// #region <name>` and `// #endregion` to denote regions when a file needs to contain a lot
   of code
-- prefer required parameters over optional ones; optional parameters are acceptable when:
-  - the default is obvious and used by the vast majority of callers (e.g., `encoding = 'utf-8'`)
-  - it's a configuration value with a sensible default (e.g., `timeout = 5000`)
+- a parameter should be optional only when callers genuinely split between passing a value and
+  relying on the default; if every caller passes a value, make it required; if no caller would ever
+  change it, it should not be a parameter at all
 - avoid optional parameters that change behavioral modes or make the function do different things
-  based on presence/absence; prefer separate functions instead
-- when adding optional parameters for backwards compatibility, consider whether a new function with
-  a clearer name would be better
+  based on presence/absence; prefer a separate function with a clearer name instead
 
 ### documentation
 
@@ -65,5 +64,6 @@ teardown is a bundlephobia alternative built with @rolldown/browser, using Vite 
 
 ### Claude Code-specific
 
-- Explore tool (subagents for exploration, planning, etc.) may not always be accurate; verify
-  subagent findings when needed
+- Explore subagent may not be accurate; verify findings as needed
+- never spawn subagents to read and return file contents; read files directly in the main context.
+  subagents should perform searches or answer specific questions, not act as file I/O proxies
