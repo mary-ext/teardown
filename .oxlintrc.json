@@ -6,6 +6,8 @@
 		"perf": "warn"
 	},
 	"rules": {
+		"no-shadow": "off",
+		"unicorn/no-array-sort": "off",
 		"unicorn/prefer-add-event-listener": "off",
 		"unicorn/require-post-message-target-origin": "off"
 	}

@@ -14,10 +14,10 @@
 	"dependencies": {
 		"@atcute/uint8array": "^1.1.1",
 		"@bokuweb/zstd-wasm": "^0.0.27",
-		"@floating-ui/dom": "^1.7.5",
+		"@floating-ui/dom": "^1.7.6",
 		"@mary/array-fns": "jsr:^0.1.5",
 		"@mary/tar": "jsr:^0.3.2",
-		"@rolldown/browser": "1.0.0-rc.5",
+		"@rolldown/browser": "1.0.0-rc.6",
 		"clsx": "^2.1.1",
 		"dequal": "^2.0.3",
 		"memfs": "^4.56.10",
@@ -25,18 +25,18 @@
 		"valibot": "^1.2.0"
 	},
 	"devDependencies": {
-		"@oxc-project/types": "^0.115.0",
+		"@oxc-project/types": "^0.116.0",
 		"@tailwindcss/vite": "^4.2.1",
-		"@types/node": "^24.10.13",
+		"@types/node": "^25.3.3",
 		"@types/semver": "^7.7.1",
-		"oxfmt": "^0.35.0",
-		"oxlint": "^1.50.0",
+		"oxfmt": "^0.36.0",
+		"oxlint": "^1.51.0",
 		"semver": "^7.7.4",
 		"tailwindcss": "^4.2.1",
 		"typescript": "~5.9.3",
 		"vite": "^7.3.1",
 		"vite-plugin-solid": "^2.11.10",
 		"vitest": "^4.0.18",
-		"wrangler": "^4.68.1"
+		"wrangler": "^4.69.0"
 	}
 }
