@@ -267,47 +267,49 @@ const PackageBundle = (props: PackageBundleProps) => {
 										</button>
 
 										<Show when={breakdownOpen()}>
-											<table class="w-full text-base-200">
-												<thead>
-													<tr class="text-left text-neutral-foreground-3">
-														<th class="py-1 pr-4 font-medium">File</th>
-														<th class="py-1 pr-4 text-right font-medium">Minified</th>
-														<th class="py-1 pr-4 text-right font-medium">Gzip</th>
-														{totals().brotliSize !== undefined && (
-															<th class="py-1 pr-4 text-right font-medium">Brotli</th>
-														)}
-														{totals().zstdSize !== undefined && (
-															<th class="py-1 text-right font-medium">Zstd</th>
-														)}
-													</tr>
-												</thead>
-												<tbody>
-													<For each={sortedOutput()}>
-														{(item) => (
-															<tr
-																classList={{
-																	'text-neutral-foreground-2': item.type === 'chunk',
-																	'text-neutral-foreground-3': item.type === 'asset',
-																}}
-															>
-																<td class="py-1 pr-4 font-mono">{item.filename}</td>
-																<td class="py-1 pr-4 text-right">{formatBytes(item.size)}</td>
-																<td class="py-1 pr-4 text-right">{formatBytes(item.gzipSize)}</td>
-																{totals().brotliSize !== undefined && (
-																	<td class="py-1 pr-4 text-right">
-																		{item.brotliSize !== undefined ? formatBytes(item.brotliSize) : '—'}
-																	</td>
-																)}
-																{totals().zstdSize !== undefined && (
-																	<td class="py-1 text-right">
-																		{item.zstdSize !== undefined ? formatBytes(item.zstdSize) : '—'}
-																	</td>
-																)}
-															</tr>
-														)}
-													</For>
-												</tbody>
-											</table>
+											<div class="overflow-x-auto">
+												<table class="w-full text-base-200 whitespace-nowrap">
+													<thead>
+														<tr class="text-left text-neutral-foreground-3">
+															<th class="py-1 pr-4 font-medium">File</th>
+															<th class="py-1 pr-4 text-right font-medium">Minified</th>
+															<th class="py-1 pr-4 text-right font-medium">Gzip</th>
+															{totals().brotliSize !== undefined && (
+																<th class="py-1 pr-4 text-right font-medium">Brotli</th>
+															)}
+															{totals().zstdSize !== undefined && (
+																<th class="py-1 text-right font-medium">Zstd</th>
+															)}
+														</tr>
+													</thead>
+													<tbody>
+														<For each={sortedOutput()}>
+															{(item) => (
+																<tr
+																	classList={{
+																		'text-neutral-foreground-2': item.type === 'chunk',
+																		'text-neutral-foreground-3': item.type === 'asset',
+																	}}
+																>
+																	<td class="py-1 pr-4 font-mono">{item.filename}</td>
+																	<td class="py-1 pr-4 text-right">{formatBytes(item.size)}</td>
+																	<td class="py-1 pr-4 text-right">{formatBytes(item.gzipSize)}</td>
+																	{totals().brotliSize !== undefined && (
+																		<td class="py-1 pr-4 text-right">
+																			{item.brotliSize !== undefined ? formatBytes(item.brotliSize) : '—'}
+																		</td>
+																	)}
+																	{totals().zstdSize !== undefined && (
+																		<td class="py-1 text-right">
+																			{item.zstdSize !== undefined ? formatBytes(item.zstdSize) : '—'}
+																		</td>
+																	)}
+																</tr>
+															)}
+														</For>
+													</tbody>
+												</table>
+											</div>
 										</Show>
 									</div>
 								</Show>
