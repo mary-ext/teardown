@@ -267,7 +267,7 @@ const PackageBundle = (props: PackageBundleProps) => {
 										</button>
 
 										<Show when={breakdownOpen()}>
-											<div class="overflow-x-auto">
+											<div class="-mx-4 overflow-x-auto px-4">
 												<table class="w-full text-base-200 whitespace-nowrap">
 													<thead>
 														<tr class="text-left text-neutral-foreground-3">
