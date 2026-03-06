@@ -1,11 +1,12 @@
-import { createSignal, For, Match, onCleanup, Show, Switch } from 'solid-js';
+import { createMemo, createSignal, For, Match, onCleanup, Show, Switch } from 'solid-js';
 
-import { LucideCheck, LucideCircleAlert, LucideInfo, LucideLoader } from '../icons/lucide';
+import { LucideCheck, LucideChevronDown, LucideCircleAlert, LucideInfo, LucideLoader } from '../icons/lucide';
+import { formatBytes } from '../lib/format';
 import { LRUCache } from '../lib/lru';
 import { createQuery } from '../lib/query';
 import { createDerivedSignal } from '../lib/signals';
 import { progress } from '../npm/events';
-import type { BundleResult, DiscoveredSubpaths, ProgressMessage } from '../npm/types';
+import type { BundleOutput, BundleResult, DiscoveredSubpaths, ProgressMessage } from '../npm/types';
 import type { BundlerWorker } from '../npm/worker-client';
 import Button from '../primitives/button';
 import * as Dropdown from '../primitives/dropdown';
@@ -30,6 +31,44 @@ function arraysEqual(a: string[], b: string[]): boolean {
 		}
 	}
 	return true;
+}
+
+/** sorts output: entry chunk first, then chunks alphabetically, then assets alphabetically */
+function sortOutput(output: BundleOutput[]): BundleOutput[] {
+	return output.toSorted((a, b) => {
+		// entry chunk comes first
+		if (a.type === 'chunk' && a.isEntry) {
+			return -1;
+		}
+		if (b.type === 'chunk' && b.isEntry) {
+			return 1;
+		}
+		// chunks before assets
+		if (a.type !== b.type) {
+			return a.type === 'chunk' ? -1 : 1;
+		}
+		// lexicographical within same type
+		if (a.filename < b.filename) {
+			return -1;
+		}
+		if (a.filename > b.filename) {
+			return 1;
+		}
+		return 0;
+	});
+}
+
+function computeTotals(output: BundleOutput[]) {
+	const size = output.reduce((s, f) => s + f.size, 0);
+	const gzipSize = output.reduce((s, f) => s + f.gzipSize, 0);
+	const brotliSize = output.every((f) => f.brotliSize !== undefined)
+		? output.reduce((s, f) => s + f.brotliSize!, 0)
+		: undefined;
+	const zstdSize = output.every((f) => f.zstdSize !== undefined)
+		? output.reduce((s, f) => s + f.zstdSize!, 0)
+		: undefined;
+
+	return { size, gzipSize, brotliSize, zstdSize };
 }
 
 // #endregion
@@ -192,86 +231,153 @@ const PackageBundle = (props: PackageBundleProps) => {
 				</Match>
 
 				<Match when={initialBundle() && bundle()}>
-					{(bundleData) => (
-						<div class="flex flex-col gap-5">
-							{/* size display card */}
-							<div class="sticky top-1 flex flex-wrap items-stretch gap-4 rounded-lg border border-neutral-stroke-3 bg-neutral-background-1 px-4 py-3">
-								<SizeStat label="Minified" size={bundleData().size} />
+					{(bundleData) => {
+						const totals = createMemo(() => computeTotals(bundleData().output));
+						const sortedOutput = createMemo(() => sortOutput(bundleData().output));
+						const hasMultipleOutputs = createMemo(() => bundleData().output.length > 1);
+						const [breakdownOpen, setBreakdownOpen] = createSignal(false);
 
-								<SizeStat label="Gzip" size={bundleData().gzipSize} />
+						return (
+							<div class="flex flex-col gap-5">
+								{/* size display card */}
+								<div class="sticky top-1 flex flex-wrap items-stretch gap-4 rounded-lg border border-neutral-stroke-3 bg-neutral-background-1 px-4 py-3">
+									<SizeStat label="Minified" size={totals().size} />
 
-								{bundleData().brotliSize! && <SizeStat label="Brotli" size={bundleData().brotliSize!} />}
+									<SizeStat label="Gzip" size={totals().gzipSize} />
 
-								{bundleData().zstdSize !== undefined && (
-									<SizeStat label="Zstd" size={bundleData().zstdSize!} />
-								)}
-							</div>
+									{totals().brotliSize !== undefined && (
+										<SizeStat label="Brotli" size={totals().brotliSize!} />
+									)}
 
-							<Switch>
-								<Match when={bundleData().isCjs}>
-									<div class="flex items-center gap-2 text-base-200 text-neutral-foreground-3">
-										<LucideInfo class="size-4" />
-										<span>CommonJS module — tree-shaking unavailable</span>
-									</div>
-								</Match>
+									{totals().zstdSize !== undefined && <SizeStat label="Zstd" size={totals().zstdSize!} />}
+								</div>
 
-								<Match when={!initialBundle()?.exports.length}>
-									<div class="flex items-center gap-2 text-base-200 text-neutral-foreground-3">
-										<LucideInfo class="size-4" />
-										<span>No exports detected — side-effects only module</span>
-									</div>
-								</Match>
+								{/* breakdown table */}
+								<Show when={hasMultipleOutputs()}>
+									<div class="flex flex-col gap-2">
+										<button
+											class="flex items-center gap-1 text-base-200 text-neutral-foreground-2 hover:text-neutral-foreground-1"
+											onClick={() => setBreakdownOpen((v) => !v)}
+										>
+											<LucideChevronDown
+												class="size-4 transition-transform duration-150"
+												classList={{ 'rotate-0': breakdownOpen(), '-rotate-90': !breakdownOpen() }}
+											/>
+											<span>Breakdown ({sortedOutput().length} files)</span>
+										</button>
 
-								<Match when={initialBundle()?.exports}>
-									{(allExports) => (
-										<div class="flex flex-col gap-3">
-											<div class="flex items-center justify-between">
-												<span class="text-base-300 font-medium text-neutral-foreground-2">
-													Exports ({allExports().length})
-												</span>
-												<div class="flex gap-1">
-													<Button appearance="subtle" size="small" onClick={selectAll}>
-														All
-													</Button>
-													<Button appearance="subtle" size="small" onClick={selectNone}>
-														None
-													</Button>
-												</div>
-											</div>
-											<div class="flex flex-wrap gap-1.5">
-												<For each={allExports()}>
-													{(exp) => {
-														const selected = () => isExportSelected(exp);
-														return (
-															<button
-																onClick={() => toggleExport(exp)}
-																class="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-base-300 transition duration-100 select-none"
+										<Show when={breakdownOpen()}>
+											<table class="w-full text-base-200">
+												<thead>
+													<tr class="text-left text-neutral-foreground-3">
+														<th class="py-1 pr-4 font-medium">File</th>
+														<th class="py-1 pr-4 text-right font-medium">Minified</th>
+														<th class="py-1 pr-4 text-right font-medium">Gzip</th>
+														{totals().brotliSize !== undefined && (
+															<th class="py-1 pr-4 text-right font-medium">Brotli</th>
+														)}
+														{totals().zstdSize !== undefined && (
+															<th class="py-1 text-right font-medium">Zstd</th>
+														)}
+													</tr>
+												</thead>
+												<tbody>
+													<For each={sortedOutput()}>
+														{(item) => (
+															<tr
 																classList={{
-																	'border-brand-stroke-1 bg-brand-background-2 text-brand-foreground-2 hover:bg-brand-background-2-hover hover:text-brand-foreground-2-hover active:bg-brand-background-2-pressed active:text-brand-foreground-2-pressed':
-																		selected(),
-																	'border-neutral-stroke-1 bg-neutral-background-1 text-neutral-foreground-2 hover:bg-neutral-background-1-hover hover:text-neutral-foreground-2-hover active:bg-neutral-background-1-pressed active:text-neutral-foreground-2-pressed':
-																		!selected(),
+																	'text-neutral-foreground-2': item.type === 'chunk',
+																	'text-neutral-foreground-3': item.type === 'asset',
 																}}
 															>
-																<LucideCheck
-																	class="duration-fast size-3.5 transition"
-																	classList={{
-																		'opacity-100': selected(),
-																		'opacity-0': !selected(),
-																	}}
-																/>
-																<span>{exp}</span>
-															</button>
-														);
-													}}
-												</For>
-											</div>
+																<td class="py-1 pr-4 font-mono">{item.filename}</td>
+																<td class="py-1 pr-4 text-right">{formatBytes(item.size)}</td>
+																<td class="py-1 pr-4 text-right">{formatBytes(item.gzipSize)}</td>
+																{totals().brotliSize !== undefined && (
+																	<td class="py-1 pr-4 text-right">
+																		{item.brotliSize !== undefined ? formatBytes(item.brotliSize) : '—'}
+																	</td>
+																)}
+																{totals().zstdSize !== undefined && (
+																	<td class="py-1 text-right">
+																		{item.zstdSize !== undefined ? formatBytes(item.zstdSize) : '—'}
+																	</td>
+																)}
+															</tr>
+														)}
+													</For>
+												</tbody>
+											</table>
+										</Show>
+									</div>
+								</Show>
+
+								<Switch>
+									<Match when={bundleData().isCjs}>
+										<div class="flex items-center gap-2 text-base-200 text-neutral-foreground-3">
+											<LucideInfo class="size-4" />
+											<span>CommonJS module — tree-shaking unavailable</span>
 										</div>
-									)}
-								</Match>
-							</Switch>
-						</div>
-					)}
+									</Match>
+
+									<Match when={!initialBundle()?.exports.length}>
+										<div class="flex items-center gap-2 text-base-200 text-neutral-foreground-3">
+											<LucideInfo class="size-4" />
+											<span>No exports detected — side-effects only module</span>
+										</div>
+									</Match>
+
+									<Match when={initialBundle()?.exports}>
+										{(allExports) => (
+											<div class="flex flex-col gap-3">
+												<div class="flex items-center justify-between">
+													<span class="text-base-300 font-medium text-neutral-foreground-2">
+														Exports ({allExports().length})
+													</span>
+													<div class="flex gap-1">
+														<Button appearance="subtle" size="small" onClick={selectAll}>
+															All
+														</Button>
+														<Button appearance="subtle" size="small" onClick={selectNone}>
+															None
+														</Button>
+													</div>
+												</div>
+												<div class="flex flex-wrap gap-1.5">
+													<For each={allExports()}>
+														{(exp) => {
+															const selected = () => isExportSelected(exp);
+															return (
+																<button
+																	onClick={() => toggleExport(exp)}
+																	class="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-base-300 transition duration-100 select-none"
+																	classList={{
+																		'border-brand-stroke-1 bg-brand-background-2 text-brand-foreground-2 hover:bg-brand-background-2-hover hover:text-brand-foreground-2-hover active:bg-brand-background-2-pressed active:text-brand-foreground-2-pressed':
+																			selected(),
+																		'border-neutral-stroke-1 bg-neutral-background-1 text-neutral-foreground-2 hover:bg-neutral-background-1-hover hover:text-neutral-foreground-2-hover active:bg-neutral-background-1-pressed active:text-neutral-foreground-2-pressed':
+																			!selected(),
+																	}}
+																>
+																	<LucideCheck
+																		class="duration-fast size-3.5 transition"
+																		classList={{
+																			'opacity-100': selected(),
+																			'opacity-0': !selected(),
+																		}}
+																	/>
+																	<span>{exp}</span>
+																</button>
+															);
+														}}
+													</For>
+												</div>
+											</div>
+										)}
+									</Match>
+								</Switch>
+							</div>
+						);
+					}}
 				</Match>
 
 				<Match when>

@@ -3,7 +3,7 @@ import { rolldown } from '@rolldown/browser';
 import { memfs } from '@rolldown/browser/experimental';
 
 import { progress } from '../events';
-import type { BundleChunk, BundleOptions, BundleResult } from '../types';
+import type { BundleAsset, BundleChunk, BundleOptions, BundleResult } from '../types';
 
 import { BundleError } from './errors';
 import { analyzeModule } from './module-type';
@@ -15,14 +15,14 @@ const { volume } = memfs!;
 const VIRTUAL_ENTRY_ID = '\0virtual:entry';
 
 /**
- * get compressed size using a compression stream.
+ * get compressed size of raw bytes using a compression stream.
  */
-async function getCompressedSize(code: string, format: CompressionFormat): Promise<number> {
+async function getCompressedSizeFromBytes(data: Uint8Array, format: CompressionFormat): Promise<number> {
 	const { readable, writable } = new CompressionStream(format);
 
 	{
 		const writer = writable.getWriter();
-		writer.write(encodeUtf8(code));
+		writer.write(data as Uint8Array<ArrayBuffer>);
 		writer.close();
 	}
 
@@ -44,6 +44,20 @@ async function getCompressedSize(code: string, format: CompressionFormat): Promi
 }
 
 /**
+ * get compressed size of a string using a compression stream.
+ */
+function getCompressedSize(code: string, format: CompressionFormat): Promise<number> {
+	return getCompressedSizeFromBytes(encodeUtf8(code), format);
+}
+
+/**
+ * get gzip size of raw bytes.
+ */
+function getGzipSizeFromBytes(data: Uint8Array): Promise<number> {
+	return getCompressedSizeFromBytes(data, 'gzip');
+}
+
+/**
  * get gzip size using compression stream.
  */
 function getGzipSize(code: string): Promise<number> {
@@ -59,10 +73,10 @@ function getGzipSize(code: string): Promise<number> {
 let isBrotliSupported: boolean | undefined;
 
 /**
- * get brotli size using compression stream, if supported.
+ * get brotli size of raw bytes, if supported.
  * returns `undefined` if brotli is not supported by the browser.
  */
-async function getBrotliSize(code: string): Promise<number | undefined> {
+async function getBrotliSizeFromBytes(data: Uint8Array): Promise<number | undefined> {
 	if (isBrotliSupported === false) {
 		return undefined;
 	}
@@ -70,7 +84,7 @@ async function getBrotliSize(code: string): Promise<number | undefined> {
 	if (isBrotliSupported === undefined) {
 		try {
 			// @ts-expect-error 'brotli' is not in the type definition yet
-			const size = await getCompressedSize(code, 'brotli');
+			const size = await getCompressedSizeFromBytes(data, 'brotli');
 			console.log(`[worker] brotli supported`);
 			isBrotliSupported = true;
 			return size;
@@ -82,7 +96,15 @@ async function getBrotliSize(code: string): Promise<number | undefined> {
 	}
 
 	// @ts-expect-error 'brotli' is not in the type definition yet
-	return getCompressedSize(code, 'brotli');
+	return getCompressedSizeFromBytes(data, 'brotli');
+}
+
+/**
+ * get brotli size using compression stream, if supported.
+ * returns `undefined` if brotli is not supported by the browser.
+ */
+function getBrotliSize(code: string): Promise<number | undefined> {
+	return getBrotliSizeFromBytes(encodeUtf8(code));
 }
 
 /**
@@ -102,10 +124,10 @@ let isZstdSupported: boolean | undefined;
 let zstdWasm: typeof import('@bokuweb/zstd-wasm') | null | undefined;
 
 /**
- * get zstd-compressed size using WASM fallback.
+ * get zstd-compressed size of raw bytes using WASM fallback.
  * returns `undefined` if WASM failed to load.
  */
-async function getZstdSizeWasm(code: string): Promise<number | undefined> {
+async function getZstdSizeWasmFromBytes(data: Uint8Array): Promise<number | undefined> {
 	if (zstdWasm === null) {
 		return undefined;
 	}
@@ -122,38 +144,45 @@ async function getZstdSizeWasm(code: string): Promise<number | undefined> {
 		}
 	}
 
-	const encoded = encodeUtf8(code);
-	const compressed = zstdWasm.compress(encoded);
+	const compressed = zstdWasm.compress(data);
 
 	return compressed.byteLength;
 }
 
 /**
- * get zstd size using compression stream if supported, or WASM fallback.
+ * get zstd size of raw bytes using compression stream if supported, or WASM fallback.
  * returns `undefined` if neither native nor WASM is available.
  */
-async function getZstdSize(code: string): Promise<number | undefined> {
+async function getZstdSizeFromBytes(data: Uint8Array): Promise<number | undefined> {
 	// use WASM fallback if native is known to be unsupported
 	if (isZstdSupported === false) {
-		return getZstdSizeWasm(code);
+		return getZstdSizeWasmFromBytes(data);
 	}
 
 	if (isZstdSupported === undefined) {
 		try {
 			// @ts-expect-error 'zstd' is not in the type definition yet
-			const size = await getCompressedSize(code, 'zstd');
+			const size = await getCompressedSizeFromBytes(data, 'zstd');
 			console.log(`[worker] zstd supported`);
 			isZstdSupported = true;
 			return size;
 		} catch {
 			console.log(`[worker] zstd not supported, trying wasm fallback`);
 			isZstdSupported = false;
-			return getZstdSizeWasm(code);
+			return getZstdSizeWasmFromBytes(data);
 		}
 	}
 
 	// @ts-expect-error 'zstd' is not in the type definition yet
-	return getCompressedSize(code, 'zstd');
+	return getCompressedSizeFromBytes(data, 'zstd');
+}
+
+/**
+ * get zstd size using compression stream if supported, or WASM fallback.
+ * returns `undefined` if neither native nor WASM is available.
+ */
+function getZstdSize(code: string): Promise<number | undefined> {
+	return getZstdSizeFromBytes(encodeUtf8(code));
 }
 
 // #endregion
@@ -183,6 +212,7 @@ export async function bundlePackage(
 		input: { main: VIRTUAL_ENTRY_ID },
 		cwd: '/',
 		external: options.rolldown?.external,
+		experimental: { resolveNewUrlToAsset: true },
 		plugins: [
 			{
 				name: 'virtual-entry',
@@ -262,8 +292,9 @@ export async function bundlePackage(
 		minify: options.rolldown?.minify ?? true,
 	});
 
-	// process all chunks
+	// split output into chunks and assets
 	const rawChunks = output.output.filter((o) => o.type === 'chunk');
+	const rawAssets = output.output.filter((o) => o.type === 'asset');
 
 	progress.emit({ type: 'progress', kind: 'compress' });
 
@@ -278,40 +309,52 @@ export async function bundlePackage(
 			]);
 
 			return {
-				fileName: chunk.fileName,
-				code,
+				type: 'chunk' as const,
+				filename: chunk.fileName,
 				size,
 				gzipSize,
 				brotliSize,
 				zstdSize,
 				isEntry: chunk.isEntry,
-				exports: chunk.exports || [],
+			};
+		}),
+	);
+
+	const assets: BundleAsset[] = await Promise.all(
+		rawAssets.map(async (asset) => {
+			const raw = typeof asset.source === 'string' ? encodeUtf8(asset.source) : asset.source;
+			// rolldown uses SharedArrayBuffer for WASM memory; CompressionStream rejects
+			// views backed by shared buffers, so copy into a regular ArrayBuffer
+			const data = raw.buffer instanceof SharedArrayBuffer ? raw.slice() : raw;
+			const size = data.byteLength;
+			const [gzipSize, brotliSize, zstdSize] = await Promise.all([
+				getGzipSizeFromBytes(data),
+				getBrotliSizeFromBytes(data),
+				getZstdSizeFromBytes(data),
+			]);
+
+			return {
+				type: 'asset' as const,
+				filename: asset.fileName,
+				size,
+				gzipSize,
+				brotliSize,
+				zstdSize,
 			};
 		}),
 	);
 
 	// find entry chunk for exports
-	const entryChunk = chunks.find((c) => c.isEntry);
+	const entryChunk = rawChunks.find((c) => c.isEntry);
 	if (!entryChunk) {
 		throw new BundleError('no entry chunk found in bundle output');
 	}
 
-	// aggregate sizes
-	const totalSize = chunks.reduce((acc, c) => acc + c.size, 0);
-	const totalGzipSize = chunks.reduce((acc, c) => acc + c.gzipSize, 0);
-	const totalBrotliSize = isBrotliSupported ? chunks.reduce((acc, c) => acc + c.brotliSize!, 0) : undefined;
-	const totalZstdSize =
-		isZstdSupported || zstdWasm != null ? chunks.reduce((acc, c) => acc + c.zstdSize!, 0) : undefined;
-
 	await bundle.close();
 
 	return {
-		chunks,
-		size: totalSize,
-		gzipSize: totalGzipSize,
-		brotliSize: totalBrotliSize,
-		zstdSize: totalZstdSize,
-		exports: entryChunk.exports,
+		output: [...chunks, ...assets],
+		exports: entryChunk.exports || [],
 		isCjs,
 	};
 }

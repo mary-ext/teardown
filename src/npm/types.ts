@@ -80,25 +80,35 @@ const initResultSchema = v.object({
 
 export type InitResult = v.InferOutput<typeof initResultSchema>;
 
+const bundleAssetSchema = v.object({
+	type: v.literal('asset'),
+	filename: v.string(),
+	size: v.number(),
+	gzipSize: v.number(),
+	brotliSize: v.optional(v.number()),
+	zstdSize: v.optional(v.number()),
+});
+
+export type BundleAsset = v.InferOutput<typeof bundleAssetSchema>;
+
 const bundleChunkSchema = v.object({
-	fileName: v.string(),
-	code: v.string(),
+	type: v.literal('chunk'),
+	filename: v.string(),
 	size: v.number(),
 	gzipSize: v.number(),
 	brotliSize: v.optional(v.number()),
 	zstdSize: v.optional(v.number()),
 	isEntry: v.boolean(),
-	exports: v.array(v.string()),
 });
 
 export type BundleChunk = v.InferOutput<typeof bundleChunkSchema>;
 
+const bundleOutputSchema = v.variant('type', [bundleAssetSchema, bundleChunkSchema]);
+
+export type BundleOutput = v.InferOutput<typeof bundleOutputSchema>;
+
 const bundleResultSchema = v.object({
-	chunks: v.array(bundleChunkSchema),
-	size: v.number(),
-	gzipSize: v.number(),
-	brotliSize: v.optional(v.number()),
-	zstdSize: v.optional(v.number()),
+	output: v.array(bundleOutputSchema),
 	exports: v.array(v.string()),
 	isCjs: v.boolean(),
 });

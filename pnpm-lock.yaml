@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  '@emnapi/core@1.8.1':
+    hash: a77aede501e9bb46e765e06258fd6d8ad4bf1d678c7d0a2d9995b9fbaa99ea02
+    path: patches/@emnapi__core@1.8.1.patch
+
 importers:
 
   .:
@@ -1958,7 +1963,7 @@ snapshots:
     dependencies:
       '@jridgewell/trace-mapping': 0.3.9
 
-  '@emnapi/core@1.8.1':
+  '@emnapi/core@1.8.1(patch_hash=a77aede501e9bb46e765e06258fd6d8ad4bf1d678c7d0a2d9995b9fbaa99ea02)':
     dependencies:
       '@emnapi/wasi-threads': 1.1.0
       tslib: 2.8.1
@@ -2313,7 +2318,7 @@ snapshots:
 
   '@napi-rs/wasm-runtime@1.1.1':
     dependencies:
-      '@emnapi/core': 1.8.1
+      '@emnapi/core': 1.8.1(patch_hash=a77aede501e9bb46e765e06258fd6d8ad4bf1d678c7d0a2d9995b9fbaa99ea02)
       '@emnapi/runtime': 1.8.1
       '@tybys/wasm-util': 0.10.1
 
