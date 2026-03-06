@@ -17,17 +17,17 @@
 		"@floating-ui/dom": "^1.7.6",
 		"@mary/array-fns": "jsr:^0.1.5",
 		"@mary/tar": "jsr:^0.3.2",
-		"@rolldown/browser": "1.0.0-rc.6",
+		"@rolldown/browser": "1.0.0-rc.7",
 		"clsx": "^2.1.1",
 		"dequal": "^2.0.3",
-		"memfs": "^4.56.10",
+		"memfs": "^4.56.11",
 		"solid-js": "^1.9.11",
 		"valibot": "^1.2.0"
 	},
 	"devDependencies": {
 		"@oxc-project/types": "^0.116.0",
 		"@tailwindcss/vite": "^4.2.1",
-		"@types/node": "^25.3.3",
+		"@types/node": "^25.3.5",
 		"@types/semver": "^7.7.1",
 		"oxfmt": "^0.36.0",
 		"oxlint": "^1.51.0",
@@ -37,6 +37,6 @@
 		"vite": "^7.3.1",
 		"vite-plugin-solid": "^2.11.10",
 		"vitest": "^4.0.18",
-		"wrangler": "^4.69.0"
+		"wrangler": "^4.71.0"
 	}
 }
