@@ -1,3 +1,4 @@
+import { dequal } from 'dequal';
 import { createMemo, createSignal, For, Match, onCleanup, Show, Switch } from 'solid-js';
 
 import { LucideCheck, LucideChevronDown, LucideCircleAlert, LucideInfo, LucideLoader } from '../icons/lucide';
@@ -19,18 +20,6 @@ import SizeStat from './size-stat';
 function serializeCacheKey(subpath: string, exports: string[] | null, excludePeers: boolean): string {
 	const base = exports === null ? subpath : `${subpath}\0${exports.join('\0')}`;
 	return excludePeers ? `${base}\0peers` : base;
-}
-
-function arraysEqual(a: string[], b: string[]): boolean {
-	if (a.length !== b.length) {
-		return false;
-	}
-	for (let i = 0; i < a.length; i++) {
-		if (a[i] !== b[i]) {
-			return false;
-		}
-	}
-	return true;
 }
 
 /** sorts output: entry chunk first, then chunks alphabetically, then assets alphabetically */
@@ -143,7 +132,7 @@ const PackageBundle = (props: PackageBundleProps) => {
 
 			const exports = selectedExports();
 			// if selection equals all exports, pass null to reuse LRU cache
-			const exportsParam = arraysEqual(exports, $initialBundle.exports) ? null : exports;
+			const exportsParam = dequal(exports, $initialBundle.exports) ? null : exports;
 
 			return { subpath: $subpath, exports: exportsParam, excludePeers: props.excludePeers };
 		},
@@ -179,8 +168,10 @@ const PackageBundle = (props: PackageBundleProps) => {
 
 	const selectNone = () => setSelectedExports([]);
 
+	const selectedSet = createMemo(() => new Set(selectedExports()));
+
 	const isExportSelected = (exportName: string) => {
-		return selectedExports().includes(exportName);
+		return selectedSet().has(exportName);
 	};
 
 	return (

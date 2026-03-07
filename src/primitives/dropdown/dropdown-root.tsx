@@ -48,7 +48,7 @@ const DropdownRoot = (props: DropdownRootProps) => {
 	const [internalValue, setInternalValue] = createSignal(props.defaultValue);
 	const selectedValue = createMemo(() => props.value ?? internalValue());
 
-	const selectOption = (value: string, _label: string) => {
+	const selectOption = (value: string) => {
 		if (props.value === undefined) {
 			setInternalValue(value);
 		}

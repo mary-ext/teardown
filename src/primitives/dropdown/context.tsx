@@ -20,7 +20,7 @@ export interface DropdownContextValue {
 	/** currently selected value */
 	selectedValue: Accessor<string | undefined>;
 	/** select an option by value */
-	selectOption: (value: string, label: string) => void;
+	selectOption: (value: string) => void;
 	/** active descendant controller for keyboard navigation */
 	activeDescendant: ActiveDescendantController;
 	/** the listbox element ref for scrolling */

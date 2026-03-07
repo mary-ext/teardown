@@ -128,9 +128,7 @@ async function fetchTarballToVolume(
 
 		// ensure parent directories exist
 		const parentDir = fullPath.slice(0, fullPath.lastIndexOf('/'));
-		if (!volume.existsSync(parentDir)) {
-			volume.mkdirSync(parentDir, { recursive: true });
-		}
+		volume.mkdirSync(parentDir, { recursive: true });
 
 		volume.writeFileSync(fullPath, content);
 	}

@@ -81,7 +81,7 @@ export function createEventEmitter<T extends unknown[]>(): EventEmitter<T> {
 		},
 		emit(...args) {
 			if (listener === undefined) {
-				return false;
+				return;
 			}
 			if (typeof listener === 'function') {
 				listener.apply(this, args);

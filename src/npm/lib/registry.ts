@@ -1,7 +1,9 @@
 import * as v from 'valibot';
 
+import type { Registry } from '../../lib/package-name';
+
 import { FetchError, InvalidSpecifierError, PackageNotFoundError } from './errors';
-import { abbreviatedPackumentSchema, type AbbreviatedPackument, type Registry } from './types';
+import { abbreviatedPackumentSchema, type AbbreviatedPackument } from './types';
 
 const NPM_REGISTRY = 'https://registry.npmjs.org';
 const JSR_REGISTRY = 'https://npm.jsr.io';

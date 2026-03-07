@@ -1,4 +1,4 @@
-import { encodeUtf8, getUtf8Length } from '@atcute/uint8array';
+import { encodeUtf8 } from '@atcute/uint8array';
 import { rolldown } from '@rolldown/browser';
 import { memfs } from '@rolldown/browser/experimental';
 
@@ -44,24 +44,10 @@ async function getCompressedSizeFromBytes(data: Uint8Array, format: CompressionF
 }
 
 /**
- * get compressed size of a string using a compression stream.
- */
-function getCompressedSize(code: string, format: CompressionFormat): Promise<number> {
-	return getCompressedSizeFromBytes(encodeUtf8(code), format);
-}
-
-/**
  * get gzip size of raw bytes.
  */
 function getGzipSizeFromBytes(data: Uint8Array): Promise<number> {
 	return getCompressedSizeFromBytes(data, 'gzip');
-}
-
-/**
- * get gzip size using compression stream.
- */
-function getGzipSize(code: string): Promise<number> {
-	return getCompressedSize(code, 'gzip');
 }
 
 /**
@@ -97,14 +83,6 @@ async function getBrotliSizeFromBytes(data: Uint8Array): Promise<number | undefi
 
 	// @ts-expect-error 'brotli' is not in the type definition yet
 	return getCompressedSizeFromBytes(data, 'brotli');
-}
-
-/**
- * get brotli size using compression stream, if supported.
- * returns `undefined` if brotli is not supported by the browser.
- */
-function getBrotliSize(code: string): Promise<number | undefined> {
-	return getBrotliSizeFromBytes(encodeUtf8(code));
 }
 
 /**
@@ -175,14 +153,6 @@ async function getZstdSizeFromBytes(data: Uint8Array): Promise<number | undefine
 
 	// @ts-expect-error 'zstd' is not in the type definition yet
 	return getCompressedSizeFromBytes(data, 'zstd');
-}
-
-/**
- * get zstd size using compression stream if supported, or WASM fallback.
- * returns `undefined` if neither native nor WASM is available.
- */
-function getZstdSize(code: string): Promise<number | undefined> {
-	return getZstdSizeFromBytes(encodeUtf8(code));
 }
 
 // #endregion
@@ -300,12 +270,12 @@ export async function bundlePackage(
 
 	const chunks: BundleChunk[] = await Promise.all(
 		rawChunks.map(async (chunk) => {
-			const code = chunk.code;
-			const size = getUtf8Length(code);
+			const bytes = encodeUtf8(chunk.code);
+			const size = bytes.byteLength;
 			const [gzipSize, brotliSize, zstdSize] = await Promise.all([
-				getGzipSize(code),
-				getBrotliSize(code),
-				getZstdSize(code),
+				getGzipSizeFromBytes(bytes),
+				getBrotliSizeFromBytes(bytes),
+				getZstdSizeFromBytes(bytes),
 			]);
 
 			return {

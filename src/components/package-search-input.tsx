@@ -4,6 +4,7 @@ import { LucideLoader, LucidePackage, LucideSearch } from '../icons/lucide';
 import { modality } from '../lib/modality';
 import { formatPackageSpecifier, parsePackageSpecifier, type Registry } from '../lib/package-name';
 import { createQuery } from '../lib/query';
+import { scrollIntoContainerView } from '../lib/scroll';
 import { createTrailingThrottle, makeAbortable } from '../lib/signals';
 import { normalizeWhitespace } from '../lib/strings';
 import Input from '../primitives/input';
@@ -261,15 +262,7 @@ const PackageSearchInput = (props: PackageSearchInputProps) => {
 									ref={(el) => {
 										createEffect(() => {
 											if (activeIndex() === index() && modality() === 'keyboard' && listboxRef) {
-												const padding = 4; // matches p-1
-												const listboxRect = listboxRef.getBoundingClientRect();
-												const optionRect = el.getBoundingClientRect();
-
-												if (optionRect.top < listboxRect.top + padding) {
-													listboxRef.scrollTop -= listboxRect.top + padding - optionRect.top;
-												} else if (optionRect.bottom > listboxRect.bottom - padding) {
-													listboxRef.scrollTop += optionRect.bottom - (listboxRect.bottom - padding);
-												}
+												scrollIntoContainerView(listboxRef, el);
 											}
 										});
 									}}

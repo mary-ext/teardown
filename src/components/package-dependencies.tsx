@@ -310,11 +310,9 @@ const PackageDependencies = (props: PackageDependenciesProps) => {
 
 		if (filterText) {
 			result = result.filter((pkg) => pkg.name.toLowerCase().includes(filterText));
-		} else {
-			result = [...result];
 		}
 
-		return [...result].toSorted(sortConfig.compare);
+		return result.toSorted(sortConfig.compare);
 	});
 
 	return (

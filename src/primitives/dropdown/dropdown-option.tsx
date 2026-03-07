@@ -2,6 +2,7 @@ import { createEffect, createUniqueId, onCleanup, Show, type JSX } from 'solid-j
 
 import { LucideCheck } from '../../icons/lucide';
 import { modality } from '../../lib/modality';
+import { scrollIntoContainerView } from '../../lib/scroll';
 
 import { useDropdownContext } from './context';
 
@@ -31,8 +32,7 @@ const DropdownOption = (props: DropdownOptionProps) => {
 		if (props.disabled) {
 			return;
 		}
-		const label = typeof props.children === 'string' ? props.children : props.value;
-		ctx.selectOption(props.value, label);
+		ctx.selectOption(props.value);
 	};
 
 	const handleMouseMove = () => {
@@ -62,15 +62,7 @@ const DropdownOption = (props: DropdownOptionProps) => {
 				createEffect(() => {
 					const listbox = ctx.listboxRef();
 					if (isActive() && modality() === 'keyboard' && listbox) {
-						const padding = 4;
-						const listboxRect = listbox.getBoundingClientRect();
-						const optionRect = el.getBoundingClientRect();
-
-						if (optionRect.top < listboxRect.top + padding) {
-							listbox.scrollTop -= listboxRect.top + padding - optionRect.top;
-						} else if (optionRect.bottom > listboxRect.bottom - padding) {
-							listbox.scrollTop += optionRect.bottom - (listboxRect.bottom - padding);
-						}
+						scrollIntoContainerView(listbox, el);
 					}
 				});
 			}}

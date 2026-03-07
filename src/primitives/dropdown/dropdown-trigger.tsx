@@ -127,7 +127,7 @@ const DropdownTrigger = (props: DropdownTriggerProps) => {
 				if (activeId) {
 					const value = ctx.getOptionValue(activeId);
 					if (value !== undefined) {
-						ctx.selectOption(value, value);
+						ctx.selectOption(value);
 					}
 				}
 				break;

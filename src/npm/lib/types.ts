@@ -1,5 +1,7 @@
 import * as v from 'valibot';
 
+import type { Registry } from '../../lib/package-name';
+
 // #region package.json schema
 
 /**
@@ -144,11 +146,6 @@ export interface ResolvedPackage {
 	/** resolved dependencies (name -> ResolvedPackage) */
 	dependencies: Map<string, ResolvedPackage>;
 }
-
-/**
- * supported package registries.
- */
-export type Registry = 'npm' | 'jsr';
 
 /**
  * the input to the resolver - a package specifier.

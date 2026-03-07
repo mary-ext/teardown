@@ -1,16 +1,12 @@
 import * as semver from 'semver';
 
+import { parsePackageSpecifier } from '../../lib/package-name';
+import type { Registry } from '../../lib/package-name';
 import { progress } from '../events';
 
 import { InvalidSpecifierError, NoMatchingVersionError } from './errors';
 import { fetchPackument, reverseJsrName } from './registry';
-import type {
-	AbbreviatedManifest,
-	PackageSpecifier,
-	Registry,
-	ResolvedPackage,
-	ResolutionResult,
-} from './types';
+import type { AbbreviatedManifest, PackageSpecifier, ResolvedPackage, ResolutionResult } from './types';
 
 /**
  * parses a package specifier string into name, range, and registry.
@@ -26,41 +22,14 @@ import type {
  * @returns parsed specifier with name, range, and registry
  */
 export function parseSpecifier(spec: string): PackageSpecifier {
-	let registry: Registry = 'npm';
-	let rest = spec;
-
-	// check for registry prefixes
-	if (spec.startsWith('jsr:')) {
-		registry = 'jsr';
-		rest = spec.slice(4); // remove "jsr:"
-	} else if (spec.startsWith('npm:')) {
-		rest = spec.slice(4); // remove "npm:", registry already 'npm'
+	const parsed = parsePackageSpecifier(spec);
+	if (!parsed) {
+		throw new InvalidSpecifierError(spec, `invalid package specifier`);
 	}
-
-	// handle scoped packages: @scope/name or @scope/name@version
-	if (rest.startsWith('@')) {
-		const slashIdx = rest.indexOf('/');
-		if (slashIdx === -1) {
-			throw new InvalidSpecifierError(spec, 'scoped package missing slash');
-		}
-		const atIdx = rest.indexOf('@', slashIdx);
-		if (atIdx === -1) {
-			return { name: rest, range: 'latest', registry };
-		}
-		return { name: rest.slice(0, atIdx), range: rest.slice(atIdx + 1), registry };
+	if (parsed.registry === 'jsr' && !parsed.name.startsWith('@')) {
+		throw new InvalidSpecifierError(spec, `JSR packages must be scoped`);
 	}
-
-	// JSR packages must be scoped
-	if (registry === 'jsr') {
-		throw new InvalidSpecifierError(spec, 'JSR packages must be scoped');
-	}
-
-	// handle regular packages: name or name@version
-	const atIdx = rest.indexOf('@');
-	if (atIdx === -1) {
-		return { name: rest, range: 'latest', registry };
-	}
-	return { name: rest.slice(0, atIdx), range: rest.slice(atIdx + 1), registry };
+	return parsed;
 }
 
 /**

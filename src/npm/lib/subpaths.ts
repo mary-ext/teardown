@@ -74,15 +74,13 @@ function resolveCondition(value: PackageExports): string | null {
 /**
  * recursively lists all files in a directory.
  */
-function listFilesRecursive(volume: Volume, dir: string): string[] {
-	const files: string[] = [];
-
+function listFilesRecursive(volume: Volume, dir: string, files: string[] = []): string[] {
 	try {
 		const entries = volume.readdirSync(dir, { withFileTypes: true });
 		for (const entry of entries) {
 			const fullPath = `${dir}/${entry.name}`;
 			if (entry.isDirectory()) {
-				files.push(...listFilesRecursive(volume, fullPath));
+				listFilesRecursive(volume, fullPath, files);
 			} else if (entry.isFile()) {
 				files.push(fullPath);
 			}
