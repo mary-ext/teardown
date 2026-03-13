@@ -37,6 +37,6 @@
 		"vite": "^8.0.0",
 		"vite-plugin-solid": "^2.11.10",
 		"vitest": "^4.1.0",
-		"wrangler": "^4.72.0"
+		"wrangler": "^4.73.0"
 	}
 }
