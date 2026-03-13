@@ -17,6 +17,7 @@ describe('fetchPackagesToVolume', () => {
 
 			// verify is-odd
 			const isOddPackageJson = volume.readFileSync('/node_modules/is-odd/package.json', 'utf8');
+			// oxlint-disable-next-line typescript/no-unsafe-type-assertion
 			const json = JSON.parse(isOddPackageJson as string);
 			expect(json.name).toBe('is-odd');
 
@@ -43,6 +44,7 @@ describe('fetchPackagesToVolume', () => {
 			await fetchPackagesToVolume(hoisted, volume);
 
 			const packageJson = volume.readFileSync('/node_modules/@babel/parser/package.json', 'utf8');
+			// oxlint-disable-next-line typescript/no-unsafe-type-assertion
 			const json = JSON.parse(packageJson as string);
 			expect(json.name).toBe('@babel/parser');
 		});
@@ -58,6 +60,7 @@ describe('fetchPackagesToVolume', () => {
 
 			// is-number@7 at root (explicitly requested)
 			const rootIsNumber = volume.readFileSync('/node_modules/is-number/package.json', 'utf8');
+			// oxlint-disable-next-line typescript/no-unsafe-type-assertion
 			const rootJson = JSON.parse(rootIsNumber as string);
 			expect(rootJson.version).toBe('7.0.0');
 
@@ -146,6 +149,7 @@ describe('unpackedSize calculation', () => {
 
 		const extractedFiles = volume.toJSON();
 		const extractedSize = Object.values(extractedFiles).reduce(
+			// oxlint-disable-next-line typescript/no-unsafe-type-assertion
 			(sum, content) => sum + (content as string).length,
 			0,
 		);

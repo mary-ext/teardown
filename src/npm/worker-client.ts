@@ -92,6 +92,7 @@ export class BundlerWorker {
 		await this.ready;
 
 		const deferred = Promise.withResolvers<T>();
+		// oxlint-disable-next-line typescript/no-unsafe-type-assertion
 		this.pending.set(message.id, deferred as PromiseWithResolvers<unknown>);
 		console.log('[worker-client] posting message:', message);
 		this.worker.postMessage(message);

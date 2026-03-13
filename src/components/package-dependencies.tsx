@@ -149,10 +149,8 @@ function resolveColorCollisions(canonicalIndices: number[]): number[] {
 				}
 			}
 
-			// oxlint-disable-next-line typescript/no-confusing-non-null-assertion
-			curr[c]! = cost + bestPrevCost;
-			// oxlint-disable-next-line typescript/no-confusing-non-null-assertion
-			parentRow[c]! = bestPrevColor;
+			curr[c] = cost + bestPrevCost;
+			parentRow[c] = bestPrevColor;
 		}
 
 		parent.push(parentRow);
@@ -345,14 +343,16 @@ const PackageDependencies = (props: PackageDependenciesProps) => {
 					/>
 
 					{/* sort dropdown */}
-					<Dropdown.Root value={sortBy()} onValueChange={(v) => setSortBy(v as SortOption)}>
+					{/* oxlint-disable-next-line typescript/no-unsafe-type-assertion */}
+				<Dropdown.Root value={sortBy()} onValueChange={(v) => setSortBy(v as SortOption)}>
 						<Dropdown.Trigger class="sm:flex-3">
 							<span class="whitespace-pre text-neutral-foreground-3">Sort by </span>
 							<span>{SORT_OPTIONS[sortBy()].label}</span>
 						</Dropdown.Trigger>
 
 						<Dropdown.Listbox>
-							<For each={Object.entries(SORT_OPTIONS) as [SortOption, SortConfig][]}>
+							{/* oxlint-disable-next-line typescript/no-unsafe-type-assertion */}
+						<For each={Object.entries(SORT_OPTIONS) as [SortOption, SortConfig][]}>
 								{([key, config]) => <Dropdown.Option value={key}>{config.label}</Dropdown.Option>}
 							</For>
 						</Dropdown.Listbox>

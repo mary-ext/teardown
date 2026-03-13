@@ -48,6 +48,7 @@ async function searchNpm(query: string, signal: AbortSignal): Promise<SearchResu
 		return [];
 	}
 
+	// oxlint-disable-next-line typescript/no-unsafe-type-assertion
 	const data = (await response.json()) as NpmSearchResponse;
 
 	return data.objects.map((obj) => ({
@@ -65,6 +66,7 @@ async function searchJsr(query: string, signal: AbortSignal): Promise<SearchResu
 		return [];
 	}
 
+	// oxlint-disable-next-line typescript/no-unsafe-type-assertion
 	const data = (await response.json()) as JsrSearchResponse;
 
 	return data.items.map((item) => ({

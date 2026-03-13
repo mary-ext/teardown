@@ -50,10 +50,11 @@ function resolveCondition(value: PackageExports): string | null {
 		let bestPriority = -1;
 
 		for (const [condition, target] of Object.entries(value)) {
+			// oxlint-disable-next-line typescript/no-unsafe-type-assertion
 			const priority = CONDITION_PRIORITY.indexOf(condition as (typeof CONDITION_PRIORITY)[number]);
 
 			if (priority > bestPriority) {
-				const resolved = resolveCondition(target as PackageExports);
+				const resolved = resolveCondition(target);
 				if (resolved) {
 					bestMatch = resolved;
 					bestPriority = priority;
@@ -205,14 +206,14 @@ export function discoverSubpaths(packageJson: PackageJson, volume: Volume): Disc
 
 					if (subpath.includes('*')) {
 						// wildcard pattern
-						const target = resolveCondition(value as PackageExports);
+						const target = resolveCondition(value);
 						if (target && target.includes('*')) {
 							const expanded = expandWildcard(subpath, target, packagePath, volume);
 							entries.push(...expanded);
 						}
 					} else {
 						// regular subpath
-						const target = resolveCondition(value as PackageExports);
+						const target = resolveCondition(value);
 						if (target) {
 							entries.push({
 								subpath,

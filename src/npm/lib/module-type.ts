@@ -31,7 +31,9 @@ function isStringLiteral(node: unknown): node is { type: 'Literal'; value: strin
 	return (
 		typeof node === 'object' &&
 		node !== null &&
+		// oxlint-disable-next-line typescript/no-unsafe-type-assertion
 		(node as { type: string }).type === 'Literal' &&
+		// oxlint-disable-next-line typescript/no-unsafe-type-assertion
 		typeof (node as { value: unknown }).value === 'string'
 	);
 }
@@ -57,6 +59,7 @@ function isExportsObject(node: Expression): boolean {
 
 	// module.exports
 	if (node.type === 'MemberExpression') {
+		// oxlint-disable-next-line typescript/no-unsafe-type-assertion
 		const memberExpr = node as StaticMemberExpression;
 		if (!memberExpr.computed) {
 			const obj = memberExpr.object;
@@ -74,6 +77,7 @@ function isExportsObject(node: Expression): boolean {
 function getStaticPropertyName(node: StaticMemberExpression): string | null {
 	if (node.computed) {
 		// computed property like exports["foo"]
+		// oxlint-disable-next-line typescript/no-unsafe-type-assertion
 		const prop = node.property as unknown as Expression;
 		if (isStringLiteral(prop)) {
 			return prop.value;
@@ -125,7 +129,7 @@ function extractObjectPropertyNames(node: Expression): string[] {
  * checks if an expression is a require() call.
  */
 function isRequireCall(expr: Expression): boolean {
-	return expr.type === 'CallExpression' && isIdentifier(expr.callee as Expression, 'require');
+	return expr.type === 'CallExpression' && isIdentifier(expr.callee, 'require');
 }
 
 /**
@@ -139,6 +143,7 @@ function checkCjsExpression(expr: Expression): string[] | null {
 
 		// exports.foo = ... or module.exports.foo = ...
 		if (left.type === 'MemberExpression') {
+			// oxlint-disable-next-line typescript/no-unsafe-type-assertion
 			const memberExpr = left as unknown as StaticMemberExpression;
 			const obj = memberExpr.object;
 
@@ -152,6 +157,7 @@ function checkCjsExpression(expr: Expression): string[] | null {
 			}
 
 			// module.exports = require('...') - CJS re-export
+			// oxlint-disable-next-line typescript/no-unsafe-type-assertion
 			if (isExportsObject(left as unknown as Expression)) {
 				if (isRequireCall(expr.right)) {
 					// re-export, we can't know the exports statically
@@ -168,6 +174,7 @@ function checkCjsExpression(expr: Expression): string[] | null {
 		const callee = expr.callee;
 
 		if (callee.type === 'MemberExpression') {
+			// oxlint-disable-next-line typescript/no-unsafe-type-assertion
 			const memberCallee = callee as StaticMemberExpression;
 			if (!memberCallee.computed && isIdentifier(memberCallee.object, 'Object')) {
 				const prop = memberCallee.property;
@@ -357,13 +364,14 @@ function containsImportMeta(expr: Expression): boolean {
 	}
 
 	if (expr.type === 'MemberExpression') {
+		// oxlint-disable-next-line typescript/no-unsafe-type-assertion
 		const memberExpr = expr as StaticMemberExpression;
 		return containsImportMeta(memberExpr.object);
 	}
 
 	if (expr.type === 'CallExpression') {
 		// check callee and arguments
-		if (containsImportMeta(expr.callee as Expression)) {
+		if (containsImportMeta(expr.callee)) {
 			return true;
 		}
 		for (const arg of expr.arguments) {
@@ -374,6 +382,7 @@ function containsImportMeta(expr: Expression): boolean {
 	}
 
 	if (expr.type === 'BinaryExpression' || expr.type === 'LogicalExpression') {
+		// oxlint-disable-next-line typescript/no-unsafe-type-assertion
 		return containsImportMeta(expr.left as Expression) || containsImportMeta(expr.right);
 	}
 

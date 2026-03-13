@@ -58,11 +58,12 @@ export const useSearchParams = <T extends SearchParamsDefinition>(
 			if (raw === undefined) {
 				result[key] = undefined;
 			} else {
-				const parsed = v.safeParse(schema!, raw);
+				const parsed = v.safeParse(schema, raw);
 				result[key] = parsed.success ? parsed.output : undefined;
 			}
 		}
 
+		// oxlint-disable-next-line typescript/no-unsafe-type-assertion
 		return result as InferSearchParamsOutput<T>;
 	};
 
@@ -107,6 +108,7 @@ export const useSearchParams = <T extends SearchParamsDefinition>(
 			}
 		}
 
+		// oxlint-disable-next-line typescript/no-unsafe-type-assertion
 		const validated = result as InferSearchParamsOutput<T>;
 
 		if (dequal(current, validated)) {

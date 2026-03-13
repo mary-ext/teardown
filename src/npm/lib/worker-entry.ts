@@ -54,7 +54,9 @@ async function handleInit(id: number, packageSpec: string, options: InitOptions 
 
 		const mainPackage = resolution.roots[0]!;
 		const pkgJsonPath = `/node_modules/${mainPackage.name}/package.json`;
+		// oxlint-disable-next-line typescript/no-unsafe-type-assertion
 		const pkgJsonContent = volume.readFileSync(pkgJsonPath, 'utf8') as string;
+		// oxlint-disable-next-line typescript/no-unsafe-type-assertion
 		const manifest = JSON.parse(pkgJsonContent) as PackageJson;
 
 		packageName = mainPackage.name;
@@ -65,7 +67,7 @@ async function handleInit(id: number, packageSpec: string, options: InitOptions 
 		const peerDependencies = Object.keys(manifest.peerDependencies ?? {});
 		const peerDepNames = new Set(peerDependencies);
 
-		const packages = buildInstalledPackages(mainPackage!, peerDepNames);
+		const packages = buildInstalledPackages(mainPackage, peerDepNames);
 		const installSize = packages.reduce((sum, pkg) => sum + pkg.size, 0);
 
 		initResult = {
@@ -174,10 +176,10 @@ self.onmessage = (event: MessageEvent<unknown>) => {
 
 	switch (request.type) {
 		case 'init':
-			handleInit(request.id, request.packageSpec, request.options);
+			void handleInit(request.id, request.packageSpec, request.options);
 			break;
 		case 'bundle':
-			handleBundle(request.id, request.subpath, request.selectedExports, request.options);
+			void handleBundle(request.id, request.subpath, request.selectedExports, request.options);
 			break;
 	}
 };

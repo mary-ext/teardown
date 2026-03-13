@@ -1,5 +1,8 @@
 {
 	"$schema": "https://unpkg.com/oxlint/configuration_schema.json",
+	"options": {
+		"typeAware": true
+	},
 	"categories": {
 		"correctness": "warn",
 		"suspicious": "warn",
@@ -9,6 +12,7 @@
 		"no-shadow": "off",
 		"unicorn/no-array-sort": "off",
 		"unicorn/prefer-add-event-listener": "off",
-		"unicorn/require-post-message-target-origin": "off"
+		"unicorn/require-post-message-target-origin": "off",
+		"typescript/require-array-sort-compare": "off"
 	}
 }

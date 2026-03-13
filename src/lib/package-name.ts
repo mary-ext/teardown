@@ -24,6 +24,7 @@ export const parsePackageSpecifier = (input: string): ParsedPackageSpecifier | n
 		return null;
 	}
 	return {
+		// oxlint-disable-next-line typescript/no-unsafe-type-assertion
 		registry: (match[1] as Registry) ?? 'npm',
 		name: match[2]!,
 		range: match[3] ?? 'latest',

@@ -11,6 +11,7 @@ export function createDerivedSignal<T>(accessor: Accessor<T>): Signal<T> {
 	const computable = createMemo(() => createSignal(accessor()));
 
 	// @ts-expect-error: setter type mismatch is fine
+	// oxlint-disable-next-line typescript/no-unsafe-type-assertion
 	return [() => computable()[0](), (next) => computable()[1](next)] as Signal<T>;
 }
 

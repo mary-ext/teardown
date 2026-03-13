@@ -79,19 +79,23 @@ export function createQuery<T, S, R>(
 
 	// normalize arguments
 	if (typeof pFetcher === 'function') {
+		// oxlint-disable-next-line typescript/no-unsafe-type-assertion
 		source = pSource as QuerySource<S>;
 		fetcher = pFetcher;
 		options = pOptions || {};
 	} else {
+		// oxlint-disable-next-line typescript/no-unsafe-type-assertion
 		source = true as QuerySource<S>;
+		// oxlint-disable-next-line typescript/no-unsafe-type-assertion
 		fetcher = pSource as QueryFetcher<S, T, R>;
-		options = (pFetcher || {}) as QueryOptions<T>;
+		options = pFetcher || {};
 	}
 
 	let pr: Promise<T> | null = null;
 	let scheduled = false;
 	let resolved = 'initialValue' in options;
 
+	// oxlint-disable-next-line typescript/no-unsafe-type-assertion
 	const dynamic = typeof source === 'function' && createMemo(source as () => S | false | null | undefined);
 	const [value, setValue] = createSignal<T | undefined>(options.initialValue);
 	const [error, setError] = createSignal<Error | undefined>(undefined);
@@ -121,6 +125,7 @@ export function createQuery<T, S, R>(
 		}
 		scheduled = false;
 
+		// oxlint-disable-next-line typescript/no-unsafe-type-assertion
 		const lookup = dynamic ? dynamic() : (source as S);
 
 		if (lookup == null || lookup === false) {
@@ -185,9 +190,10 @@ export function createQuery<T, S, R>(
 	if (dynamic) {
 		createComputed(() => load(false));
 	} else {
-		load(false);
+		void load(false);
 	}
 
+	// oxlint-disable-next-line typescript/no-unsafe-type-assertion
 	return [read as QueryResource<T>, { refetch: load, mutate: setValue }];
 }
 

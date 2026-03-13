@@ -103,8 +103,10 @@ const MenuPopover = (props: MenuPopoverProps) => {
 								const handleClickOutside = (ev: MouseEvent) => {
 									const currentTrigger = ctx.triggerRef();
 									if (
+										// oxlint-disable-next-line typescript/no-unsafe-type-assertion
 										!el.contains(ev.target as Node) &&
 										currentTrigger &&
+										// oxlint-disable-next-line typescript/no-unsafe-type-assertion
 										!currentTrigger.contains(ev.target as Node)
 									) {
 										ctx.setOpen(false);

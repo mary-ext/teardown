@@ -22,8 +22,9 @@ async function getCompressedSizeFromBytes(data: Uint8Array, format: CompressionF
 
 	{
 		const writer = writable.getWriter();
-		writer.write(data as Uint8Array<ArrayBuffer>);
-		writer.close();
+		// oxlint-disable-next-line typescript/no-unsafe-type-assertion
+		void writer.write(data as Uint8Array<ArrayBuffer>);
+		void writer.close();
 	}
 
 	let size = 0;
@@ -212,7 +213,8 @@ export async function bundlePackage(
 					// read the source file
 					let source: string;
 					try {
-						source = volume.readFileSync(resolved.id, 'utf8') as string;
+						// oxlint-disable-next-line typescript/no-unsafe-type-assertion
+					source = volume.readFileSync(resolved.id, 'utf8') as string;
 					} catch {
 						throw new BundleError(`failed to read entry module: ${resolved.id}`);
 					}
