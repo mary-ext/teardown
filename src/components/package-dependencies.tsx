@@ -344,7 +344,7 @@ const PackageDependencies = (props: PackageDependenciesProps) => {
 
 					{/* sort dropdown */}
 					{/* oxlint-disable-next-line typescript/no-unsafe-type-assertion */}
-				<Dropdown.Root value={sortBy()} onValueChange={(v) => setSortBy(v as SortOption)}>
+					<Dropdown.Root value={sortBy()} onValueChange={(v) => setSortBy(v as SortOption)}>
 						<Dropdown.Trigger class="sm:flex-3">
 							<span class="whitespace-pre text-neutral-foreground-3">Sort by </span>
 							<span>{SORT_OPTIONS[sortBy()].label}</span>
@@ -352,7 +352,7 @@ const PackageDependencies = (props: PackageDependenciesProps) => {
 
 						<Dropdown.Listbox>
 							{/* oxlint-disable-next-line typescript/no-unsafe-type-assertion */}
-						<For each={Object.entries(SORT_OPTIONS) as [SortOption, SortConfig][]}>
+							<For each={Object.entries(SORT_OPTIONS) as [SortOption, SortConfig][]}>
 								{([key, config]) => <Dropdown.Option value={key}>{config.label}</Dropdown.Option>}
 							</For>
 						</Dropdown.Listbox>

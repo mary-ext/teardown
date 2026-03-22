@@ -214,7 +214,7 @@ export async function bundlePackage(
 					let source: string;
 					try {
 						// oxlint-disable-next-line typescript/no-unsafe-type-assertion
-					source = volume.readFileSync(resolved.id, 'utf8') as string;
+						source = volume.readFileSync(resolved.id, 'utf8') as string;
 					} catch {
 						throw new BundleError(`failed to read entry module: ${resolved.id}`);
 					}
