@@ -5,7 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"dev": "vite",
-		"build": "tsc -b && vite build",
+		"build": "oxlint && vite build",
 		"preview": "vite preview",
 		"fmt": "oxfmt",
 		"lint": "oxlint",
@@ -17,27 +17,27 @@
 		"@floating-ui/dom": "^1.7.6",
 		"@mary/array-fns": "jsr:^0.1.5",
 		"@mary/tar": "jsr:^0.3.2",
-		"@rolldown/browser": "1.0.0-rc.10",
+		"@rolldown/browser": "1.0.0-rc.12",
 		"clsx": "^2.1.1",
 		"dequal": "^2.0.3",
 		"memfs": "^4.57.1",
-		"solid-js": "^1.9.11",
+		"solid-js": "^1.9.12",
 		"valibot": "^1.3.1"
 	},
 	"devDependencies": {
-		"@oxc-project/types": "^0.121.0",
+		"@oxc-project/types": "^0.122.0",
 		"@tailwindcss/vite": "^4.2.2",
 		"@types/node": "^25.5.0",
 		"@types/semver": "^7.7.1",
-		"oxfmt": "^0.41.0",
-		"oxlint": "^1.56.0",
-		"oxlint-tsgolint": "^0.17.1",
+		"oxfmt": "^0.42.0",
+		"oxlint": "^1.57.0",
+		"oxlint-tsgolint": "^0.17.4",
 		"semver": "^7.7.4",
 		"tailwindcss": "^4.2.2",
-		"typescript": "~5.9.3",
-		"vite": "^8.0.1",
+		"typescript": "~6.0.2",
+		"vite": "^8.0.3",
 		"vite-plugin-solid": "^2.11.11",
-		"vitest": "^4.1.0",
-		"wrangler": "^4.76.0"
+		"vitest": "^4.1.2",
+		"wrangler": "^4.77.0"
 	}
 }
