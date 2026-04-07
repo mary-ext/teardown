@@ -97,8 +97,8 @@ export function createQuery<T, S, R>(
 
 	// oxlint-disable-next-line typescript/no-unsafe-type-assertion
 	const dynamic = typeof source === 'function' && createMemo(source as () => S | false | null | undefined);
-	const [value, setValue] = createSignal<T | undefined>(options.initialValue);
-	const [error, setError] = createSignal<Error | undefined>(undefined);
+	const [value, setValue] = createSignal(options.initialValue);
+	const [error, setError] = createSignal<Error>();
 	const [state, setState] = createSignal<QueryState>(resolved ? 'ready' : 'unresolved');
 
 	function loadEnd(p: Promise<T> | null, v: T | undefined, err?: Error) {
