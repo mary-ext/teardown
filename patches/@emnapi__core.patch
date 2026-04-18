@@ -1,8 +1,7 @@
 diff --git a/dist/emnapi-core.esm-bundler.js b/dist/emnapi-core.esm-bundler.js
-index af3a8aaacc2b0eb1e71a3d9984169f19cd1d3744..ae38952bd7972008445bdcef2c085296fb4cdf17 100644
 --- a/dist/emnapi-core.esm-bundler.js
 +++ b/dist/emnapi-core.esm-bundler.js
-@@ -4457,16 +4457,13 @@ function createNapiModule(options) {
+@@ -4527,16 +4527,13 @@ function createNapiModule(options) {
                          viewDescriptor = { Ctor: Float16Array, address: external_data, length: byte_length >> 1, ownership: 1 /* ReferenceOwnership.kUserland */, runtimeAllocated: 0 };
                          break;
                      case -2 /* emnapi_memory_view_type.emnapi_buffer */: {
