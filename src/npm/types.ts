@@ -72,6 +72,7 @@ export type InstalledPackage = v.InferOutput<typeof installedPackageSchema>;
 const initResultSchema = v.object({
 	name: v.string(),
 	version: v.string(),
+	description: v.optional(v.string()),
 	subpaths: discoveredSubpathsSchema,
 	installSize: v.number(),
 	packages: v.array(installedPackageSchema),

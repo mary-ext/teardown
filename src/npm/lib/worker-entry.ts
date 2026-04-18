@@ -73,6 +73,7 @@ async function handleInit(id: number, packageSpec: string, options: InitOptions 
 		initResult = {
 			name: mainPackage.name,
 			version: mainPackage.version,
+			description: manifest.description,
 			subpaths,
 			installSize,
 			packages,

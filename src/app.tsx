@@ -1,5 +1,5 @@
 import { sample, sampleOne } from '@mary/array-fns';
-import { createEffect, createMemo, createSignal, Match, onCleanup, Switch } from 'solid-js';
+import { createMemo, Match, Switch } from 'solid-js';
 import * as v from 'valibot';
 
 import PackageResult from './components/package-result';
@@ -13,13 +13,16 @@ import {
 	LucideScissorsLineDashed,
 } from './icons/lucide';
 import { TangledDolly } from './icons/tangled';
-import { PACKAGE_SPECIFIER_RE } from './lib/package-name';
+import {
+	formatPackageSpecifier,
+	PACKAGE_SPECIFIER_RE,
+	parsePackageSpecifier,
+	type Registry,
+} from './lib/package-name';
 import { createQuery } from './lib/query';
 import { createDerivedSignal } from './lib/signals';
 import { useSearchParams } from './lib/use-search-params';
-import { progress } from './npm/events';
-import type { ProgressMessage } from './npm/types';
-import { initPackage } from './npm/worker-client';
+import { fetchPackageManifest } from './npm/packument';
 import Button from './primitives/button';
 import Tooltip from './primitives/tooltip';
 import { RECOMMENDATIONS } from './recommendations';
@@ -34,21 +37,26 @@ function App() {
 		q: v.pipe(v.string(), v.regex(PACKAGE_SPECIFIER_RE)),
 	});
 
-	const packageName = createMemo(() => params().q);
-
-	const [query, setQuery] = createDerivedSignal(() => packageName() ?? '');
-
-	const [result, { refetch }] = createQuery(packageName, (name) => initPackage(name), {
-		keepPreviousData: false,
+	const parsed = createMemo(() => {
+		const q = params().q;
+		return q ? parsePackageSpecifier(q) : null;
 	});
 
-	createEffect(() => {
-		const $result = result();
-		if (!$result) {
-			return;
-		}
+	const identity = createMemo<{ registry: Registry; name: string } | undefined>(
+		() => {
+			const p = parsed();
+			return p ? { registry: p.registry, name: p.name } : undefined;
+		},
+		undefined,
+		{ equals: (a, b) => a?.registry === b?.registry && a?.name === b?.name },
+	);
 
-		onCleanup(() => $result.worker.terminate());
+	const range = createMemo(() => parsed()?.range ?? 'latest');
+
+	const [query, setQuery] = createDerivedSignal(() => params().q ?? '');
+
+	const [manifest, { refetch }] = createQuery(identity, (id) => fetchPackageManifest(id.registry, id.name), {
+		keepPreviousData: false,
 	});
 
 	const recs = sample(RECOMMENDATIONS, 6)
@@ -113,56 +121,35 @@ function App() {
 				)}
 
 				<Switch>
-					<Match when={result()} keyed>
-						{(result) => <PackageResult result={result} />}
+					<Match when={manifest()} keyed>
+						{(m) => (
+							<PackageResult
+								manifest={m}
+								range={range()}
+								onVersionChange={(version) => {
+									setParams({
+										q: formatPackageSpecifier({ registry: m.registry, name: m.name, range: version }),
+									});
+								}}
+							/>
+						)}
 					</Match>
 
-					<Match when={result.state === 'errored'}>
+					<Match when={manifest.state === 'errored'}>
 						<div class="flex flex-col items-center justify-center gap-3 py-12">
 							<LucideCircleAlert class="text-danger-foreground-1 size-5" />
-							<span class="text-base-300 text-neutral-foreground-2">{result.error?.message}</span>
+							<span class="text-base-300 text-neutral-foreground-2">{manifest.error?.message}</span>
 							<Button appearance="subtle" onClick={() => refetch()}>
 								Retry
 							</Button>
 						</div>
 					</Match>
 
-					<Match when={result.state === 'pending' || result.state === 'refreshing'} keyed>
-						{(_) => {
-							const [progressState, setProgressState] = createSignal<ProgressMessage | null>(null);
-
-							onCleanup(progress.listen((msg) => setProgressState(msg)));
-
-							return (
-								<div class="flex flex-col items-center justify-center gap-3 py-12">
-									<LucideLoader class="size-5 animate-spin-linear text-neutral-foreground-3" />
-
-									{(() => {
-										const p = progressState();
-
-										switch (p?.kind) {
-											case 'resolve':
-												return (
-													<span class="text-base-300 text-neutral-foreground-2">
-														Resolved {p.name}@{p.version}
-													</span>
-												);
-											case 'fetch':
-												return (
-													<div class="flex flex-col items-center gap-1">
-														<span class="text-base-300 text-neutral-foreground-2">Downloaded {p.name}</span>
-														<span class="text-base-200 text-neutral-foreground-3">
-															{p.current} / {p.total}
-														</span>
-													</div>
-												);
-											default:
-												return <span class="text-base-300 text-neutral-foreground-2">Loading...</span>;
-										}
-									})()}
-								</div>
-							);
-						}}
+					<Match when={manifest.loading}>
+						<div class="flex flex-col items-center justify-center gap-3 py-12">
+							<LucideLoader class="size-5 animate-spin-linear text-neutral-foreground-3" />
+							<span class="text-base-300 text-neutral-foreground-2">Loading...</span>
+						</div>
 					</Match>
 
 					<Match when>
