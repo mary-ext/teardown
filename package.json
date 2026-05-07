@@ -17,7 +17,7 @@
 		"@floating-ui/dom": "^1.7.6",
 		"@mary/array-fns": "jsr:^0.1.5",
 		"@mary/tar": "jsr:^0.3.2",
-		"@rolldown/browser": "1.0.0-rc.18",
+		"@rolldown/browser": "^1.0.0",
 		"clsx": "^2.1.1",
 		"dequal": "^2.0.3",
 		"memfs": "^4.57.2",

@@ -117,7 +117,7 @@ time:
   '@rolldown/binding-linux-x64-musl@1.0.0-rc.18': 2026-04-29T13:43:03.793Z
   '@rolldown/binding-win32-arm64-msvc@1.0.0-rc.18': 2026-04-29T13:43:43.550Z
   '@rolldown/binding-win32-x64-msvc@1.0.0-rc.18': 2026-04-29T13:42:51.691Z
-  '@rolldown/browser@1.0.0-rc.18': 2026-04-29T13:42:33.539Z
+  '@rolldown/browser@1.0.0': 2026-05-07T09:08:53.720Z
   '@rolldown/pluginutils@1.0.0-rc.18': 2026-04-29T13:42:40.058Z
   '@sindresorhus/is@7.2.0': 2025-12-27T10:44:14.788Z
   '@speed-highlight/core@1.2.15': 2026-03-18T12:49:31.000Z
@@ -273,8 +273,8 @@ importers:
         specifier: jsr:^0.3.2
         version: 0.3.2
       '@rolldown/browser':
-        specifier: 1.0.0-rc.18
-        version: 1.0.0-rc.18
+        specifier: ^1.0.0
+        version: 1.0.0
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
@@ -1045,8 +1045,8 @@ packages:
     cpu:
     - x64
 
-  '@rolldown/browser@1.0.0-rc.18':
-    resolution: {integrity: sha512-La+Nufg7kJfPHI1CK9IKxGMGbXgVUVtKSkYf8SvnNENsouTBBM79CQsBXunkE4rdt50WickJtOCxoDJDOBFb6w==}
+  '@rolldown/browser@1.0.0':
+    resolution: {integrity: sha512-TaxlUShLsjmoa4mKx5xhZKgCVxsC4VTSSOQjAjoc71vRJQZaUtg+wZgq8q5Vo9N9N3WDkT7fdyCsJnJCgDKoRA==}
     hasBin: true
 
   '@rolldown/pluginutils@1.0.0-rc.18':
@@ -2192,7 +2192,7 @@ snapshots:
 
   '@rolldown/binding-win32-x64-msvc@1.0.0-rc.18': {}
 
-  '@rolldown/browser@1.0.0-rc.18':
+  '@rolldown/browser@1.0.0':
     dependencies:
       '@emnapi/core': 1.10.0
       '@emnapi/runtime': 1.10.0
