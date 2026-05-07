@@ -1,2 +1,0 @@
-patchedDependencies:
-  '@emnapi/core': patches/@emnapi__core.patch

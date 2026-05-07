@@ -1,0 +1,8 @@
+allowBuilds:
+  esbuild: true
+  workerd: true
+  '@rolldown/browser': false
+  sharp: false
+
+patchedDependencies:
+  '@emnapi/core@1.10.0': patches/@emnapi+core@1.10.0.patch
