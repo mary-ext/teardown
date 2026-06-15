@@ -12,32 +12,32 @@
 		"test": "vitest"
 	},
 	"dependencies": {
-		"@atcute/uint8array": "^1.1.1",
+		"@atcute/uint8array": "^1.1.2",
 		"@bokuweb/zstd-wasm": "^0.0.27",
 		"@floating-ui/dom": "^1.7.6",
 		"@mary/array-fns": "jsr:^0.1.5",
 		"@mary/tar": "jsr:^0.3.2",
-		"@rolldown/browser": "^1.0.0",
+		"@rolldown/browser": "^1.1.1",
 		"clsx": "^2.1.1",
 		"dequal": "^2.0.3",
-		"memfs": "^4.57.2",
-		"solid-js": "^1.9.12",
-		"valibot": "^1.4.0"
+		"memfs": "^4.57.7",
+		"solid-js": "^1.9.13",
+		"valibot": "^1.4.1"
 	},
 	"devDependencies": {
-		"@oxc-project/types": "^0.129.0",
-		"@tailwindcss/vite": "^4.2.4",
-		"@types/node": "^25.6.0",
+		"@oxc-project/types": "^0.135.0",
+		"@tailwindcss/vite": "^4.3.1",
+		"@types/node": "^25.9.3",
 		"@types/semver": "^7.7.1",
-		"oxfmt": "^0.48.0",
-		"oxlint": "^1.63.0",
-		"oxlint-tsgolint": "^0.22.1",
-		"semver": "^7.7.4",
-		"tailwindcss": "^4.2.4",
+		"oxfmt": "^0.54.0",
+		"oxlint": "^1.69.0",
+		"oxlint-tsgolint": "^0.23.0",
+		"semver": "^7.8.4",
+		"tailwindcss": "^4.3.1",
 		"typescript": "~6.0.3",
-		"vite": "^8.0.11",
+		"vite": "^8.0.16",
 		"vite-plugin-solid": "^2.11.12",
-		"vitest": "^4.1.5",
-		"wrangler": "^4.88.0"
+		"vitest": "^4.1.8",
+		"wrangler": "^4.100.0"
 	}
 }
