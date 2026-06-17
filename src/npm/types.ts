@@ -19,6 +19,7 @@ const initOptionsSchema = v.object({
 export type InitOptions = v.InferOutput<typeof initOptionsSchema>;
 
 const bundleOptionsSchema = v.object({
+	attribute: v.optional(v.boolean()),
 	rolldown: v.optional(
 		v.object({
 			external: v.optional(v.array(v.string())),
@@ -108,7 +109,27 @@ const bundleOutputSchema = v.variant('type', [bundleAssetSchema, bundleChunkSche
 
 export type BundleOutput = v.InferOutput<typeof bundleOutputSchema>;
 
+const exportWeightSchema = v.object({
+	asyncBytes: v.number(),
+	confidence: v.picklist(['ambiguous', 'high', 'unknown']),
+	initialBytes: v.number(),
+	name: v.string(),
+});
+
+export type ExportWeight = v.InferOutput<typeof exportWeightSchema>;
+
+const attributionSchema = v.object({
+	exports: v.array(exportWeightSchema),
+	overhead: v.number(),
+	shared: v.number(),
+	total: v.number(),
+	unattributed: v.number(),
+});
+
+export type Attribution = v.InferOutput<typeof attributionSchema>;
+
 const bundleResultSchema = v.object({
+	attribution: v.optional(attributionSchema),
 	output: v.array(bundleOutputSchema),
 	exports: v.array(v.string()),
 	isCjs: v.boolean(),
