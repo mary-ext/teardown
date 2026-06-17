@@ -3,9 +3,11 @@ import { rolldown } from '@rolldown/browser';
 import { memfs } from '@rolldown/browser/experimental';
 
 import { progress } from '../events';
-import type { BundleAsset, BundleChunk, BundleOptions, BundleResult } from '../types';
+import type { Attribution, BundleAsset, BundleChunk, BundleOptions, BundleResult } from '../types';
 
+import { attributeExports, type ModuleCost } from './attribution';
 import { BundleError } from './errors';
+import { type ExportOrigin, type ModuleReader, resolveExportOrigins } from './export-origin';
 import { analyzeModule } from './module-type';
 
 const { volume } = memfs!;
@@ -178,6 +180,12 @@ export async function bundlePackage(
 	// track whether module is CJS (set in load hook)
 	let isCjs = false;
 
+	// per-export attribution state, populated only when requested (set in load/buildEnd hooks)
+	const attribute = options.attribute ?? false;
+	const graph = new Map<string, string[]>();
+	let resolvedEntryId: string | null = null;
+	let origins: Map<string, ExportOrigin> | undefined;
+
 	// bundle with rolldown
 	const bundle = await rolldown({
 		input: { main: VIRTUAL_ENTRY_ID },
@@ -204,6 +212,7 @@ export async function bundlePackage(
 					if (!resolved) {
 						throw new BundleError(`failed to resolve entry module: ${importPath}`);
 					}
+					resolvedEntryId = resolved.id;
 
 					// JSON files only have a default export
 					if (resolved.id.endsWith('.json')) {
@@ -255,13 +264,49 @@ export async function bundlePackage(
 					const quoted = selectedExports.map((e) => JSON.stringify(e));
 					return `export { ${quoted.join(', ')} } from '${importPath}';\n`;
 				},
+				// snapshot the module graph and trace export origins for attribution.
+				// runs in buildEnd where the full graph and the resolver are both available.
+				async buildEnd() {
+					if (!attribute || isCjs || resolvedEntryId === null) {
+						return;
+					}
+
+					for (const id of this.getModuleIds()) {
+						const info = this.getModuleInfo(id);
+						if (info) {
+							graph.set(id, [...info.importedIds, ...info.dynamicallyImportedIds]);
+						}
+					}
+
+					// for an all-exports bundle, the resolved name set lives on the virtual entry
+					const names = selectedExports ?? this.getModuleInfo(VIRTUAL_ENTRY_ID)?.exports ?? [];
+					const reader: ModuleReader = {
+						parse: (source) => this.parse(source),
+						readFile: (id) => {
+							try {
+								// oxlint-disable-next-line typescript/no-unsafe-type-assertion
+								return volume.readFileSync(id, 'utf8') as string;
+							} catch {
+								return null;
+							}
+						},
+						resolve: async (specifier, importer) => {
+							const result = await this.resolve(specifier, importer);
+							return result?.id ?? null;
+						},
+					};
+
+					origins = await resolveExportOrigins(reader, resolvedEntryId, names);
+				},
 			},
 		],
 	});
 
 	const output = await bundle.generate({
 		format: 'esm',
-		minify: options.rolldown?.minify ?? true,
+		// per-module `code` is pre-minify, so attribution needs an unminified chunk to
+		// share the same byte basis; the headline size still comes from the normal pass
+		minify: attribute ? false : (options.rolldown?.minify ?? true),
 	});
 
 	// split output into chunks and assets
@@ -324,7 +369,28 @@ export async function bundlePackage(
 
 	await bundle.close();
 
+	// attribute the measured bytes across exports using the traced origins + graph
+	let attribution: Attribution | undefined;
+	if (attribute && !isCjs && origins) {
+		const moduleCosts = new Map<string, ModuleCost>();
+		for (const chunk of rawChunks) {
+			for (const [id, rendered] of Object.entries(chunk.modules)) {
+				const bytes = rendered.code !== null ? encodeUtf8(rendered.code).byteLength : 0;
+				const prev = moduleCosts.get(id);
+				// a module shown in the entry chunk counts as initial, even if also split out
+				moduleCosts.set(id, {
+					async: (prev?.async ?? true) && !chunk.isEntry,
+					bytes: (prev?.bytes ?? 0) + bytes,
+				});
+			}
+		}
+
+		const totalBytes = chunks.reduce((sum, chunk) => sum + chunk.size, 0);
+		attribution = attributeExports({ graph, moduleCosts, origins, totalBytes });
+	}
+
 	return {
+		attribution,
 		output: [...chunks, ...assets],
 		exports: entryChunk.exports || [],
 		isCjs,
