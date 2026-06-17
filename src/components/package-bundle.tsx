@@ -7,7 +7,14 @@ import { LRUCache } from '../lib/lru';
 import { createQuery } from '../lib/query';
 import { createDerivedSignal } from '../lib/signals';
 import { progress } from '../npm/events';
-import type { BundleOutput, BundleResult, DiscoveredSubpaths, ProgressMessage } from '../npm/types';
+import type {
+	Attribution,
+	BundleOptions,
+	BundleOutput,
+	BundleResult,
+	DiscoveredSubpaths,
+	ProgressMessage,
+} from '../npm/types';
 import type { BundlerWorker } from '../npm/worker-client';
 import Button from '../primitives/button';
 import * as Dropdown from '../primitives/dropdown';
@@ -17,9 +24,15 @@ import SizeStat from './size-stat';
 
 // #region helpers
 
-function serializeCacheKey(subpath: string, exports: string[] | null, excludePeers: boolean): string {
+function serializeCacheKey(
+	subpath: string,
+	exports: string[] | null,
+	excludePeers: boolean,
+	attribute = false,
+): string {
 	const base = exports === null ? subpath : `${subpath}\0${exports.join('\0')}`;
-	return excludePeers ? `${base}\0peers` : base;
+	const withPeers = excludePeers ? `${base}\0peers` : base;
+	return attribute ? `${withPeers}\0attr` : withPeers;
 }
 
 /** sorts output: entry chunk first, then chunks alphabetically, then assets alphabetically */
@@ -59,6 +72,94 @@ function computeTotals(output: BundleOutput[]) {
 
 	return { size, gzipSize, brotliSize, zstdSize };
 }
+
+/** renders a signed byte amount, e.g. a negative bundler-overhead delta. */
+function formatSigned(bytes: number): string {
+	return bytes < 0 ? `−${formatBytes(-bytes)}` : formatBytes(bytes);
+}
+
+/**
+ * per-export size breakdown: private weight per export plus shared/unattributed/overhead buckets.
+ * attribution is computed on the unminified bundle (per-module sizes are pre-minify), so byte
+ * values are scaled by each part's code share to the minified `total` shown in the headline.
+ */
+const WeightBreakdown = (props: { attribution: Attribution; total: number }) => {
+	const basis = () => props.attribution.total;
+	const share = (bytes: number) => (basis() > 0 ? bytes / basis() : 0);
+	const display = (bytes: number) => share(bytes) * props.total;
+
+	const sorted = createMemo(() =>
+		props.attribution.exports
+			.map((weight) => ({ ...weight, raw: weight.asyncBytes + weight.initialBytes }))
+			.toSorted((a, b) => b.raw - a.raw),
+	);
+
+	const coverage = createMemo(() => {
+		const attributed = props.attribution.exports.reduce((sum, w) => sum + w.asyncBytes + w.initialBytes, 0);
+		return share(attributed + props.attribution.shared);
+	});
+
+	return (
+		<div class="flex flex-col gap-3">
+			<For each={sorted()}>
+				{(weight) => (
+					<div class="flex flex-col gap-1">
+						<div class="flex items-center justify-between gap-2 text-base-200">
+							<span class="flex min-w-0 items-center gap-1.5">
+								<span class="truncate font-mono text-neutral-foreground-2">{weight.name}</span>
+								<Show when={weight.confidence !== 'high'}>
+									<span class="rounded shrink-0 border border-neutral-stroke-1 px-1 text-neutral-foreground-3">
+										{weight.confidence === 'ambiguous' ? 'ambiguous' : 'untraced'}
+									</span>
+								</Show>
+							</span>
+							<span class="shrink-0 text-neutral-foreground-2">
+								{formatBytes(display(weight.raw))}
+								<Show when={weight.asyncBytes > 0}>
+									<span class="text-neutral-foreground-3">
+										{' '}
+										· {formatBytes(display(weight.asyncBytes))} async
+									</span>
+								</Show>
+							</span>
+						</div>
+						<div class="h-1.5 overflow-hidden rounded-full bg-neutral-background-3">
+							<div
+								class="h-full rounded-full bg-brand-background"
+								style={{ width: `${share(weight.raw) * 100}%` }}
+							/>
+						</div>
+					</div>
+				)}
+			</For>
+
+			<div class="flex flex-col gap-1 text-base-200 text-neutral-foreground-3">
+				<Show when={props.attribution.shared > 0}>
+					<div class="flex items-center justify-between">
+						<span>Shared (2+ exports)</span>
+						<span>{formatBytes(display(props.attribution.shared))}</span>
+					</div>
+				</Show>
+				<Show when={props.attribution.unattributed > 0}>
+					<div class="flex items-center justify-between">
+						<span>Unattributed</span>
+						<span>{formatBytes(display(props.attribution.unattributed))}</span>
+					</div>
+				</Show>
+				<Show when={props.attribution.overhead !== 0}>
+					<div class="flex items-center justify-between">
+						<span>Bundler overhead</span>
+						<span>{formatSigned(display(props.attribution.overhead))}</span>
+					</div>
+				</Show>
+			</div>
+
+			<p class="text-base-200 text-neutral-foreground-3">
+				{`${Math.round(coverage() * 100)}% of ${formatBytes(props.total)} traced to exports — shared code is pooled, not split. approximate minified bytes.`}
+			</p>
+		</div>
+	);
+};
 
 // #endregion
 
@@ -144,6 +245,47 @@ const PackageBundle = (props: PackageBundleProps) => {
 			}
 
 			const options = excludePeers ? { rolldown: { external: peerDependencies } } : undefined;
+			const res = await worker.bundle(subpath, exports, options);
+			bundleCache.put(cacheKey, res);
+			return res;
+		},
+	);
+
+	// per-export weight breakdown — opt-in, since attribution traces the whole graph
+	const [showWeights, setShowWeights] = createSignal(false);
+
+	const [weights, { refetch: refetchWeights }] = createQuery(
+		() => {
+			if (!showWeights()) {
+				return null;
+			}
+
+			const $subpath = subpath();
+			const $initialBundle = initialBundle.state === 'ready' && initialBundle();
+			if (!$subpath || !$initialBundle) {
+				return null;
+			}
+
+			const exports = selectedExports();
+			if (exports.length === 0) {
+				return null;
+			}
+
+			// attribution needs concrete export names to trace, so never collapse to null
+			return { subpath: $subpath, exports, excludePeers: props.excludePeers };
+		},
+		async ({ subpath, exports, excludePeers }) => {
+			const cacheKey = serializeCacheKey(subpath, exports, excludePeers, true);
+			const cached = bundleCache.get(cacheKey);
+			if (cached) {
+				return cached;
+			}
+
+			const options: BundleOptions = { attribute: true };
+			if (excludePeers) {
+				options.rolldown = { external: peerDependencies };
+			}
+
 			const res = await worker.bundle(subpath, exports, options);
 			bundleCache.put(cacheKey, res);
 			return res;
@@ -368,6 +510,51 @@ const PackageBundle = (props: PackageBundleProps) => {
 										)}
 									</Match>
 								</Switch>
+
+								{/* per-export weight breakdown (opt-in) */}
+								<Show when={!bundleData().isCjs && (initialBundle()?.exports.length ?? 0) > 0}>
+									<div class="flex flex-col gap-3">
+										<div class="flex items-center justify-between">
+											<span class="text-base-300 font-medium text-neutral-foreground-2">
+												Weight by export
+											</span>
+											<Button appearance="subtle" size="small" onClick={() => setShowWeights((v) => !v)}>
+												{showWeights() ? 'Hide' : 'Show'}
+											</Button>
+										</div>
+
+										<Show when={showWeights()}>
+											<Switch>
+												<Match when={weights.state === 'errored'}>
+													<div class="flex items-center gap-2 text-base-200 text-neutral-foreground-3">
+														<LucideCircleAlert class="size-4 shrink-0" />
+														<span>{weights.error?.message}</span>
+														<Button appearance="subtle" size="small" onClick={() => refetchWeights()}>
+															Retry
+														</Button>
+													</div>
+												</Match>
+
+												<Match when={weights()?.attribution}>
+													{(attr) => <WeightBreakdown attribution={attr()} total={totals().size} />}
+												</Match>
+
+												<Match when={selectedExports().length === 0}>
+													<span class="text-base-200 text-neutral-foreground-3">
+														Select at least one export to weigh.
+													</span>
+												</Match>
+
+												<Match when>
+													<div class="flex items-center gap-2 text-base-200 text-neutral-foreground-3">
+														<LucideLoader class="size-4 shrink-0 animate-spin-linear" />
+														<span>Analyzing exports…</span>
+													</div>
+												</Match>
+											</Switch>
+										</Show>
+									</div>
+								</Show>
 							</div>
 						);
 					}}
