@@ -1,3 +1,9 @@
 /*
   Cross-Origin-Opener-Policy: same-origin
   Cross-Origin-Embedder-Policy: require-corp
+
+# hashed filenames change on every content change, so cache forever.
+# kept off /* because cloudflare combines duplicate headers with commas
+# rather than overriding, which would corrupt the value on these paths.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
