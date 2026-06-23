@@ -37,7 +37,7 @@ export class BundlerWorker {
 			this.resolveReady = resolve;
 		});
 
-		this.worker = new Worker(new URL('./lib/worker-entry.ts', import.meta.url), { type: 'module' });
+		this.worker = new Worker(new URL('./lib/worker-bootstrap.ts', import.meta.url), { type: 'module' });
 		this.worker.onmessage = this.handleMessage.bind(this);
 		this.worker.onerror = this.handleError.bind(this);
 	}
