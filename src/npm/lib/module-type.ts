@@ -25,73 +25,63 @@ export interface ModuleInfo {
 // #region helpers
 
 /**
- * checks if a node is a string literal with type "Literal".
+ * views an AST node as an untyped property bag. the static node types don't expose the
+ * fields these predicates probe for, and `unknown` widens to `any` without an assertion,
+ * so this keeps the unsafe-cast escape hatch in one place rather than scattered `as any`.
  */
-function isStringLiteral(node: unknown): node is { type: 'Literal'; value: string } {
-	return (
-		typeof node === 'object' &&
-		node !== null &&
-		// oxlint-disable-next-line typescript/no-unsafe-type-assertion
-		(node as { type: string }).type === 'Literal' &&
-		// oxlint-disable-next-line typescript/no-unsafe-type-assertion
-		typeof (node as { value: unknown }).value === 'string'
-	);
+function fields(node: unknown): any {
+	return node;
 }
 
 /**
- * checks if an expression is an identifier with the given name.
+ * checks if a node is a string literal with type "Literal".
  */
-function isIdentifier(node: Expression | null | undefined, name: string): boolean {
-	if (!node) {
-		return false;
-	}
-	// IdentifierReference and IdentifierName both have type "Identifier" and name property
-	return node.type === 'Identifier' && (node as { name: string }).name === name;
+function isStringLiteral(node: unknown): node is { type: 'Literal'; value: string } {
+	const o = fields(node);
+	return o?.type === 'Literal' && typeof o.value === 'string';
+}
+
+/**
+ * checks if a node is an identifier with the given name.
+ *
+ * handles every identifier shape (IdentifierReference, IdentifierName, …): they all
+ * share type "Identifier" and a `name` property.
+ */
+function isIdentifier(node: unknown, name: string): boolean {
+	const o = fields(node);
+	return o?.type === 'Identifier' && o.name === name;
 }
 
 /**
  * checks if an expression is `exports` or `module.exports`.
  */
-function isExportsObject(node: Expression): boolean {
+function isExportsObject(node: unknown): boolean {
 	if (isIdentifier(node, 'exports')) {
 		return true;
 	}
 
 	// module.exports
-	if (node.type === 'MemberExpression') {
-		// oxlint-disable-next-line typescript/no-unsafe-type-assertion
-		const memberExpr = node as StaticMemberExpression;
-		if (!memberExpr.computed) {
-			const obj = memberExpr.object;
-			const prop = memberExpr.property;
-			return isIdentifier(obj, 'module') && prop.type === 'Identifier' && prop.name === 'exports';
-		}
-	}
-
-	return false;
+	const o = fields(node);
+	return (
+		o?.type === 'MemberExpression' &&
+		!o.computed &&
+		isIdentifier(o.object, 'module') &&
+		isIdentifier(o.property, 'exports')
+	);
 }
 
 /**
  * gets the property name from a static member expression.
  */
 function getStaticPropertyName(node: StaticMemberExpression): string | null {
-	if (node.computed) {
+	const o = fields(node);
+	if (o.computed) {
 		// computed property like exports["foo"]
-		// oxlint-disable-next-line typescript/no-unsafe-type-assertion
-		const prop = node.property as unknown as Expression;
-		if (isStringLiteral(prop)) {
-			return prop.value;
-		}
-		return null;
+		return isStringLiteral(o.property) ? o.property.value : null;
 	}
 
 	// non-computed like exports.foo
-	const prop = node.property;
-	if (prop.type === 'Identifier') {
-		return prop.name;
-	}
-
-	return null;
+	return o.property?.type === 'Identifier' ? o.property.name : null;
 }
 
 /**
@@ -104,17 +94,15 @@ function extractObjectPropertyNames(node: Expression): string[] {
 
 	const names: string[] = [];
 	for (const prop of node.properties) {
-		if (prop.type === 'SpreadElement') {
+		if (prop.type !== 'Property') {
 			continue;
 		}
 
-		if (prop.type === 'Property') {
-			const key = prop.key;
-			if (key.type === 'Identifier') {
-				names.push((key as { name: string }).name);
-			} else if (isStringLiteral(key)) {
-				names.push(key.value);
-			}
+		const key = fields(prop.key);
+		if (key.type === 'Identifier') {
+			names.push(key.name);
+		} else if (isStringLiteral(key)) {
+			names.push(key.value);
 		}
 	}
 
@@ -139,61 +127,39 @@ function isRequireCall(expr: Expression): boolean {
 function checkCjsExpression(expr: Expression): string[] | null {
 	// assignment expressions: exports.foo = ... or module.exports = ...
 	if (expr.type === 'AssignmentExpression' && expr.operator === '=') {
-		const left = expr.left;
+		const left = fields(expr.left);
 
 		// exports.foo = ... or module.exports.foo = ...
 		if (left.type === 'MemberExpression') {
-			// oxlint-disable-next-line typescript/no-unsafe-type-assertion
-			const memberExpr = left as unknown as StaticMemberExpression;
-			const obj = memberExpr.object;
-
 			// direct assignment to exports.propertyName
-			if (isExportsObject(obj)) {
-				const propName = getStaticPropertyName(memberExpr);
-				if (propName !== null) {
-					return [propName];
-				}
-				return [];
+			if (isExportsObject(left.object)) {
+				const propName = getStaticPropertyName(left);
+				return propName !== null ? [propName] : [];
 			}
 
-			// module.exports = require('...') - CJS re-export
-			// oxlint-disable-next-line typescript/no-unsafe-type-assertion
-			if (isExportsObject(left as unknown as Expression)) {
-				if (isRequireCall(expr.right)) {
-					// re-export, we can't know the exports statically
-					return [];
-				}
-				// module.exports = { a, b }
-				return extractObjectPropertyNames(expr.right);
+			// module.exports = require('...') (re-export, exports unknowable) or module.exports = { a, b }
+			if (isExportsObject(left)) {
+				return isRequireCall(expr.right) ? [] : extractObjectPropertyNames(expr.right);
 			}
 		}
 	}
 
 	// Object.defineProperty(exports, 'name', ...) or Object.defineProperty(module.exports, 'name', ...)
-	if (expr.type === 'CallExpression') {
-		const callee = expr.callee;
-
-		if (callee.type === 'MemberExpression') {
-			// oxlint-disable-next-line typescript/no-unsafe-type-assertion
-			const memberCallee = callee as StaticMemberExpression;
-			if (!memberCallee.computed && isIdentifier(memberCallee.object, 'Object')) {
-				const prop = memberCallee.property;
-				if (prop.type === 'Identifier' && prop.name === 'defineProperty') {
-					const args = expr.arguments;
-					if (args.length >= 2) {
-						const target = args[0]!;
-						const propArg = args[1]!;
-
-						if (
-							target.type !== 'SpreadElement' &&
-							isExportsObject(target) &&
-							propArg.type !== 'SpreadElement' &&
-							isStringLiteral(propArg)
-						) {
-							return [propArg.value];
-						}
-					}
-				}
+	if (expr.type === 'CallExpression' && expr.callee.type === 'MemberExpression') {
+		const callee = fields(expr.callee);
+		if (
+			!callee.computed &&
+			isIdentifier(callee.object, 'Object') &&
+			isIdentifier(callee.property, 'defineProperty')
+		) {
+			const [target, propArg] = expr.arguments;
+			if (
+				target?.type !== 'SpreadElement' &&
+				isExportsObject(target) &&
+				propArg?.type !== 'SpreadElement' &&
+				isStringLiteral(propArg)
+			) {
+				return [propArg.value];
 			}
 		}
 	}
@@ -257,20 +223,6 @@ function checkCjsStatement(stmt: Statement): string[] | null {
 }
 
 /**
- * checks if an arbitrary AST node is an identifier with the given name.
- */
-function isNamedIdentifier(node: unknown, name: string): boolean {
-	return (
-		typeof node === 'object' &&
-		node !== null &&
-		'type' in node &&
-		node.type === 'Identifier' &&
-		'name' in node &&
-		node.name === name
-	);
-}
-
-/**
  * recursively searches an AST subtree for a `define.amd` member access — the marker a
  * UMD wrapper uses to detect an AMD loader.
  */
@@ -284,13 +236,11 @@ function referencesDefineAmd(node: unknown): boolean {
 	}
 
 	// matches both ESTree (`MemberExpression`) and Oxc (`StaticMemberExpression`) shapes
+	const o = fields(node);
 	if (
-		'type' in node &&
-		(node.type === 'MemberExpression' || node.type === 'StaticMemberExpression') &&
-		'object' in node &&
-		isNamedIdentifier(node.object, 'define') &&
-		'property' in node &&
-		isNamedIdentifier(node.property, 'amd')
+		(o.type === 'MemberExpression' || o.type === 'StaticMemberExpression') &&
+		isIdentifier(o.object, 'define') &&
+		isIdentifier(o.property, 'amd')
 	) {
 		return true;
 	}
@@ -437,9 +387,7 @@ function containsImportMeta(expr: Expression): boolean {
 	}
 
 	if (expr.type === 'MemberExpression') {
-		// oxlint-disable-next-line typescript/no-unsafe-type-assertion
-		const memberExpr = expr as StaticMemberExpression;
-		return containsImportMeta(memberExpr.object);
+		return containsImportMeta(fields(expr).object);
 	}
 
 	if (expr.type === 'CallExpression') {
@@ -455,8 +403,7 @@ function containsImportMeta(expr: Expression): boolean {
 	}
 
 	if (expr.type === 'BinaryExpression' || expr.type === 'LogicalExpression') {
-		// oxlint-disable-next-line typescript/no-unsafe-type-assertion
-		return containsImportMeta(expr.left as Expression) || containsImportMeta(expr.right);
+		return containsImportMeta(fields(expr).left) || containsImportMeta(expr.right);
 	}
 
 	if (expr.type === 'UnaryExpression') {
