@@ -191,6 +191,35 @@ describe('analyzeModule', () => {
 		});
 	});
 
+	describe('UMD detection', () => {
+		it('detects a UMD wrapper as umd with a default export', () => {
+			const info = analyze(`
+				(function (global, factory) {
+					typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
+					typeof define === 'function' && define.amd ? define(['exports'], factory) :
+					(global = global || self, factory(global.MyLib = {}));
+				})(this, (function (exports) {
+					'use strict';
+					exports.foo = 1;
+				}));
+			`);
+			expect(info.type).toBe('umd');
+			expect(info.hasDefaultExport).toBe(true);
+		});
+
+		it('detects an arrow-function UMD wrapper', () => {
+			const info = analyze(
+				"((global, factory) => { typeof define === 'function' && define.amd ? define(['exports'], factory) : factory(global.X = {}); })(this, (exports) => { exports.y = 1; })",
+			);
+			expect(info.type).toBe('umd');
+		});
+
+		it('does not treat a plain IIFE without define.amd as umd', () => {
+			const info = analyze('(function (exports) { exports.foo = 1; })(this)');
+			expect(info.type).toBe('unknown');
+		});
+	});
+
 	describe('unknown detection', () => {
 		it('returns unknown for empty file', () => {
 			const info = analyze('');

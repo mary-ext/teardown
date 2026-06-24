@@ -448,10 +448,17 @@ const PackageBundle = (props: PackageBundleProps) => {
 								</Show>
 
 								<Switch>
-									<Match when={bundleData().isCjs}>
+									<Match when={bundleData().moduleType === 'cjs'}>
 										<div class="flex items-center gap-2 text-base-200 text-neutral-foreground-3">
 											<LucideInfo class="size-4" />
 											<span>CommonJS module — tree-shaking unavailable</span>
+										</div>
+									</Match>
+
+									<Match when={bundleData().moduleType === 'umd'}>
+										<div class="flex items-center gap-2 text-base-200 text-neutral-foreground-3">
+											<LucideInfo class="size-4" />
+											<span>UMD bundle — tree-shaking unavailable</span>
 										</div>
 									</Match>
 
@@ -512,7 +519,7 @@ const PackageBundle = (props: PackageBundleProps) => {
 								</Switch>
 
 								{/* per-export weight breakdown (opt-in) */}
-								<Show when={!bundleData().isCjs && (initialBundle()?.exports.length ?? 0) > 0}>
+								<Show when={bundleData().moduleType === 'esm' && (initialBundle()?.exports.length ?? 0) > 0}>
 									<div class="flex flex-col gap-3">
 										<div class="flex items-center justify-between">
 											<span class="text-base-300 font-medium text-neutral-foreground-2">

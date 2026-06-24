@@ -8,7 +8,7 @@ import type { Attribution, BundleAsset, BundleChunk, BundleOptions, BundleResult
 import { attributeExports, type ModuleCost } from './attribution';
 import { BundleError } from './errors';
 import { type ExportOrigin, type ModuleReader, resolveExportOrigins } from './export-origin';
-import { analyzeModule } from './module-type';
+import { analyzeModule, type ModuleType } from './module-type';
 
 const { volume } = memfs!;
 
@@ -177,8 +177,8 @@ export async function bundlePackage(
 	selectedExports: string[] | null,
 	options: BundleOptions,
 ): Promise<BundleResult> {
-	// track whether module is CJS (set in load hook)
-	let isCjs = false;
+	// module format of the entry, detected in the load hook
+	let moduleType: ModuleType = 'unknown';
 
 	// per-export attribution state, populated only when requested (set in load/buildEnd hooks)
 	const attribute = options.attribute ?? false;
@@ -237,15 +237,16 @@ export async function bundlePackage(
 					}
 
 					const moduleInfo = analyzeModule(ast);
-					isCjs = moduleInfo.type === 'cjs';
+					moduleType = moduleInfo.type;
 
-					// CJS modules can't be tree-shaken effectively, just re-export default
-					if (moduleInfo.type === 'cjs') {
+					// CJS and UMD bundles can't be tree-shaken; measure the whole module via its
+					// default export rather than emitting an empty re-export
+					if (moduleType === 'cjs' || moduleType === 'umd') {
 						return `export { default } from '${importPath}';\n`;
 					}
 
 					// unknown/side-effects only modules have no exports
-					if (moduleInfo.type === 'unknown') {
+					if (moduleType === 'unknown') {
 						return `export {} from '${importPath}';\n`;
 					}
 
@@ -267,7 +268,7 @@ export async function bundlePackage(
 				// snapshot the module graph and trace export origins for attribution.
 				// runs in buildEnd where the full graph and the resolver are both available.
 				async buildEnd() {
-					if (!attribute || isCjs || resolvedEntryId === null) {
+					if (!attribute || moduleType !== 'esm' || resolvedEntryId === null) {
 						return;
 					}
 
@@ -369,9 +370,10 @@ export async function bundlePackage(
 
 	await bundle.close();
 
-	// attribute the measured bytes across exports using the traced origins + graph
+	// attribute the measured bytes across exports using the traced origins + graph.
+	// `origins` is only populated in buildEnd for ESM entries, so it gates this implicitly.
 	let attribution: Attribution | undefined;
-	if (attribute && !isCjs && origins) {
+	if (attribute && origins) {
 		const moduleCosts = new Map<string, ModuleCost>();
 		for (const chunk of rawChunks) {
 			for (const [id, rendered] of Object.entries(chunk.modules)) {
@@ -393,7 +395,7 @@ export async function bundlePackage(
 		attribution,
 		output: [...chunks, ...assets],
 		exports: entryChunk.exports || [],
-		isCjs,
+		moduleType,
 	};
 }
 

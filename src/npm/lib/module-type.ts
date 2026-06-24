@@ -2,7 +2,7 @@ import type { Expression, Program, Statement, StaticMemberExpression } from '@ox
 
 // #region types
 
-export type ModuleType = 'esm' | 'cjs' | 'unknown';
+export type ModuleType = 'cjs' | 'esm' | 'umd' | 'unknown';
 
 /**
  * information about a module's format and exports.
@@ -257,6 +257,71 @@ function checkCjsStatement(stmt: Statement): string[] | null {
 }
 
 /**
+ * checks if an arbitrary AST node is an identifier with the given name.
+ */
+function isNamedIdentifier(node: unknown, name: string): boolean {
+	return (
+		typeof node === 'object' &&
+		node !== null &&
+		'type' in node &&
+		node.type === 'Identifier' &&
+		'name' in node &&
+		node.name === name
+	);
+}
+
+/**
+ * recursively searches an AST subtree for a `define.amd` member access — the marker a
+ * UMD wrapper uses to detect an AMD loader.
+ */
+function referencesDefineAmd(node: unknown): boolean {
+	if (typeof node !== 'object' || node === null) {
+		return false;
+	}
+
+	if (Array.isArray(node)) {
+		return node.some((child) => referencesDefineAmd(child));
+	}
+
+	// matches both ESTree (`MemberExpression`) and Oxc (`StaticMemberExpression`) shapes
+	if (
+		'type' in node &&
+		(node.type === 'MemberExpression' || node.type === 'StaticMemberExpression') &&
+		'object' in node &&
+		isNamedIdentifier(node.object, 'define') &&
+		'property' in node &&
+		isNamedIdentifier(node.property, 'amd')
+	) {
+		return true;
+	}
+
+	return Object.values(node).some((value) => referencesDefineAmd(value));
+}
+
+/**
+ * detects a UMD bundle: a top-level IIFE whose wrapper dispatches on `define.amd`.
+ * only the invoked wrapper function is scanned (where the AMD branch lives), not its
+ * factory argument, which holds the entire — potentially huge — module body.
+ */
+function looksLikeUmd(ast: Program): boolean {
+	for (const stmt of ast.body) {
+		if (stmt.type !== 'ExpressionStatement' || stmt.expression.type !== 'CallExpression') {
+			continue;
+		}
+
+		const callee = stmt.expression.callee;
+		if (
+			(callee.type === 'ArrowFunctionExpression' || callee.type === 'FunctionExpression') &&
+			referencesDefineAmd(callee.body)
+		) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
  * analyzes an Oxc AST to determine the module format and exports.
  *
  * @param ast the parsed program AST
@@ -348,6 +413,14 @@ export function analyzeModule(ast: Program): ModuleInfo {
 				namedExports.push(...cjsExports);
 			}
 		}
+	}
+
+	// a UMD bundle reads as a single opaque IIFE at the top level, so the statement scan
+	// above leaves it `unknown`; recognize the wrapper so it's measured as a whole module
+	// (default export) rather than tree-shaken to nothing.
+	if (type === 'unknown' && looksLikeUmd(ast)) {
+		type = 'umd';
+		hasDefaultExport = true;
 	}
 
 	return { type, hasDefaultExport, namedExports };

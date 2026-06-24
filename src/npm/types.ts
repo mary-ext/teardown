@@ -132,7 +132,7 @@ const bundleResultSchema = v.object({
 	attribution: v.optional(attributionSchema),
 	output: v.array(bundleOutputSchema),
 	exports: v.array(v.string()),
-	isCjs: v.boolean(),
+	moduleType: v.picklist(['cjs', 'esm', 'umd', 'unknown']),
 });
 
 export type BundleResult = v.InferOutput<typeof bundleResultSchema>;
