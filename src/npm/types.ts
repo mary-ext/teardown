@@ -24,6 +24,7 @@ const bundleOptionsSchema = v.object({
 		v.object({
 			external: v.optional(v.array(v.string())),
 			minify: v.optional(v.boolean()),
+			platform: v.optional(v.picklist(['browser', 'node'])),
 		}),
 	),
 });

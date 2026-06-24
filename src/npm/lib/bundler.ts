@@ -190,6 +190,7 @@ export async function bundlePackage(
 	const bundle = await rolldown({
 		input: { main: VIRTUAL_ENTRY_ID },
 		cwd: '/',
+		platform: options.rolldown?.platform,
 		external: options.rolldown?.external,
 		experimental: { resolveNewUrlToAsset: true },
 		plugins: [

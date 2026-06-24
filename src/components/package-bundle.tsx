@@ -24,14 +24,25 @@ import SizeStat from './size-stat';
 
 // #region helpers
 
+type Platform = 'browser' | 'node';
+
+const PLATFORM_LABELS: Record<Platform, string> = {
+	browser: 'Browser',
+	node: 'Node.js',
+};
+
+const PLATFORMS: Platform[] = ['browser', 'node'];
+
 function serializeCacheKey(
+	platform: Platform,
 	subpath: string,
 	exports: string[] | null,
 	excludePeers: boolean,
 	attribute = false,
 ): string {
 	const base = exports === null ? subpath : `${subpath}\0${exports.join('\0')}`;
-	const withPeers = excludePeers ? `${base}\0peers` : base;
+	const withPlatform = `${platform}\0${base}`;
+	const withPeers = excludePeers ? `${withPlatform}\0peers` : withPlatform;
 	return attribute ? `${withPeers}\0attr` : withPeers;
 }
 
@@ -195,17 +206,21 @@ const PackageBundle = (props: PackageBundleProps) => {
 
 	const [subpath, setSubpath] = createSignal(subpaths.defaultSubpath!);
 
+	// resolution platform — selects which export conditions win (e.g. a package's `browser`
+	// build vs. its `import`/`node` ESM). changing it re-runs the initial bundle.
+	const [platform, setPlatform] = createSignal<Platform>('browser');
+
 	// initial bundle query - fetches all exports to discover what's available
 	const [initialBundle, { refetch: refetchInitial }] = createQuery(
-		subpath,
-		async (subpath) => {
-			const cacheKey = serializeCacheKey(subpath, null, false);
+		() => ({ platform: platform(), subpath: subpath() }),
+		async ({ platform, subpath }) => {
+			const cacheKey = serializeCacheKey(platform, subpath, null, false);
 			const cached = bundleCache.peek(cacheKey);
 			if (cached) {
 				return cached;
 			}
 
-			const res = await worker.bundle(subpath, null);
+			const res = await worker.bundle(subpath, null, { rolldown: { platform } });
 			bundleCache.put(cacheKey, res);
 			return res;
 		},
@@ -235,17 +250,26 @@ const PackageBundle = (props: PackageBundleProps) => {
 			// if selection equals all exports, pass null to reuse LRU cache
 			const exportsParam = dequal(exports, $initialBundle.exports) ? null : exports;
 
-			return { subpath: $subpath, exports: exportsParam, excludePeers: props.excludePeers };
+			return {
+				subpath: $subpath,
+				exports: exportsParam,
+				excludePeers: props.excludePeers,
+				platform: platform(),
+			};
 		},
-		async ({ subpath, exports, excludePeers }) => {
-			const cacheKey = serializeCacheKey(subpath, exports, excludePeers);
+		async ({ subpath, exports, excludePeers, platform }) => {
+			const cacheKey = serializeCacheKey(platform, subpath, exports, excludePeers);
 			const cached = bundleCache.get(cacheKey);
 			if (cached) {
 				return cached;
 			}
 
-			const options = excludePeers ? { rolldown: { external: peerDependencies } } : undefined;
-			const res = await worker.bundle(subpath, exports, options);
+			const rolldown: NonNullable<BundleOptions['rolldown']> = { platform };
+			if (excludePeers) {
+				rolldown.external = peerDependencies;
+			}
+
+			const res = await worker.bundle(subpath, exports, { rolldown });
 			bundleCache.put(cacheKey, res);
 			return res;
 		},
@@ -272,21 +296,21 @@ const PackageBundle = (props: PackageBundleProps) => {
 			}
 
 			// attribution needs concrete export names to trace, so never collapse to null
-			return { subpath: $subpath, exports, excludePeers: props.excludePeers };
+			return { subpath: $subpath, exports, excludePeers: props.excludePeers, platform: platform() };
 		},
-		async ({ subpath, exports, excludePeers }) => {
-			const cacheKey = serializeCacheKey(subpath, exports, excludePeers, true);
+		async ({ subpath, exports, excludePeers, platform }) => {
+			const cacheKey = serializeCacheKey(platform, subpath, exports, excludePeers, true);
 			const cached = bundleCache.get(cacheKey);
 			if (cached) {
 				return cached;
 			}
 
-			const options: BundleOptions = { attribute: true };
+			const rolldown: NonNullable<BundleOptions['rolldown']> = { platform };
 			if (excludePeers) {
-				options.rolldown = { external: peerDependencies };
+				rolldown.external = peerDependencies;
 			}
 
-			const res = await worker.bundle(subpath, exports, options);
+			const res = await worker.bundle(subpath, exports, { attribute: true, rolldown });
 			bundleCache.put(cacheKey, res);
 			return res;
 		},
@@ -340,6 +364,25 @@ const PackageBundle = (props: PackageBundleProps) => {
 					</Dropdown.Root>
 				</Field.Root>
 			</Show>
+
+			{/* platform selector — which export conditions resolve */}
+			<Field.Root label="Platform">
+				<Dropdown.Root
+					value={platform()}
+					onValueChange={(v) => {
+						if (v === 'browser' || v === 'node') {
+							setPlatform(v);
+						}
+					}}
+				>
+					<Dropdown.Trigger>{PLATFORM_LABELS[platform()]}</Dropdown.Trigger>
+					<Dropdown.Listbox>
+						<For each={/* @once */ PLATFORMS}>
+							{(p) => <Dropdown.Option value={p}>{PLATFORM_LABELS[p]}</Dropdown.Option>}
+						</For>
+					</Dropdown.Listbox>
+				</Dropdown.Root>
+			</Field.Root>
 
 			{/* bundle results */}
 			<Switch>
