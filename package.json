@@ -7,7 +7,7 @@
 		"dev": "vite",
 		"build": "oxlint && vite build",
 		"preview": "vite preview",
-		"fmt": "oxfmt",
+		"format": "oxfmt",
 		"lint": "oxlint",
 		"test": "vitest"
 	},

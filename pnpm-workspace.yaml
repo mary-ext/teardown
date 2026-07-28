@@ -1,5 +1,5 @@
 allowBuilds:
-  esbuild: true
-  workerd: true
   '@rolldown/browser': false
+  esbuild: true
   sharp: false
+  workerd: true

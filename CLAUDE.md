@@ -4,13 +4,15 @@ teardown is a bundlephobia alternative built with @rolldown/browser, using Vite 
 
 ### project management
 
-- tools like Node.js and aube are managed by mise
+- tools like Node.js and pnpm are managed by mise
 - Node.js can run TypeScript files directly (`node index.ts`, strip types is unflagged)
-- test with `aube run test` (node test)
-- build with `aube run build` (tsdown)
-- format with `aube run fmt` (oxfmt)
-- lint and typecheck with `aube run lint` (oxlint)
-- check `aube view <package>` before adding a new dependency
+- start the dev server with `pnpm dev` (vite)
+- build with `pnpm build` (vite)
+- run tests with `pnpm test` (vitest)
+- format with `pnpm format` (oxfmt)
+- lint and typecheck with `pnpm lint` (oxlint)
+  - oxlint is configured to run the type checker, AVOID running `tsc`
+- check `pnpm view <package>` before adding a new dependency
 
 ### code writing
 
