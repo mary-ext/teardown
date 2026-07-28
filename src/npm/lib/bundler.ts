@@ -16,6 +16,30 @@ const { volume } = memfs!;
 
 const VIRTUAL_ENTRY_ID = '\0virtual:entry';
 
+const BUILD_ENV = {
+	BASE_URL: '/',
+	NODE_ENV: 'production',
+	MODE: 'production',
+	DEV: false,
+	PROD: true,
+	SSR: false,
+};
+
+const PRODUCTION_DEFINE: Record<string, string> = {
+	'import.meta.hot': 'undefined',
+	...Object.fromEntries(
+		Object.entries(BUILD_ENV).flatMap(([key, value]) => {
+			const literal = JSON.stringify(value);
+			return [
+				[`import.meta.env.${key}`, literal],
+				[`process.env.${key}`, literal],
+			];
+		}),
+	),
+	'import.meta.env': JSON.stringify(BUILD_ENV),
+	'import.meta.env.*': 'undefined',
+};
+
 /**
  * get compressed size of raw bytes using a compression stream.
  */
@@ -192,7 +216,12 @@ export async function bundlePackage(
 		cwd: '/',
 		platform: options.rolldown?.platform,
 		external: options.rolldown?.external,
-		experimental: { resolveNewUrlToAsset: true },
+		transform: { define: PRODUCTION_DEFINE },
+		resolve: { conditionNames: ['production'] },
+		experimental: {
+			resolveNewUrlToAsset: true,
+			attachDebugInfo: 'none',
+		},
 		plugins: [
 			{
 				name: 'virtual-entry',
@@ -309,6 +338,7 @@ export async function bundlePackage(
 		// per-module `code` is pre-minify, so attribution needs an unminified chunk to
 		// share the same byte basis; the headline size still comes from the normal pass
 		minify: attribute ? false : (options.rolldown?.minify ?? true),
+		comments: { legal: false, annotation: false, jsdoc: false },
 	});
 
 	// split output into chunks and assets
