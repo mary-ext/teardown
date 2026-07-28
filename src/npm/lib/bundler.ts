@@ -40,6 +40,35 @@ const PRODUCTION_DEFINE: Record<string, string> = {
 	'import.meta.env.*': 'undefined',
 };
 
+/** source dialect a module should be parsed as. */
+type ParserLang = 'dts' | 'js' | 'jsx' | 'ts' | 'tsx';
+
+/**
+ * infers the dialect to parse a module as from its file extension.
+ *
+ * @param id the resolved module id
+ * @returns the dialect
+ */
+function inferParserLang(id: string): ParserLang {
+	const extension = id.slice(id.lastIndexOf('.') + 1);
+	switch (extension) {
+		case 'cts':
+		case 'mts':
+		case 'ts': {
+			return /\.d\.[cm]?ts$/.test(id) ? 'dts' : 'ts';
+		}
+		case 'jsx': {
+			return 'jsx';
+		}
+		case 'tsx': {
+			return 'tsx';
+		}
+		default: {
+			return 'js';
+		}
+	}
+}
+
 /**
  * get compressed size of raw bytes using a compression stream.
  */
@@ -261,7 +290,7 @@ export async function bundlePackage(
 					// parse and analyze the module
 					let ast;
 					try {
-						ast = this.parse(source);
+						ast = this.parse(source, { lang: inferParserLang(resolved.id) });
 					} catch {
 						throw new BundleError(`failed to parse entry module: ${resolved.id}`);
 					}
@@ -312,7 +341,7 @@ export async function bundlePackage(
 					// for an all-exports bundle, the resolved name set lives on the virtual entry
 					const names = selectedExports ?? this.getModuleInfo(VIRTUAL_ENTRY_ID)?.exports ?? [];
 					const reader: ModuleReader = {
-						parse: (source) => this.parse(source),
+						parse: (source, id) => this.parse(source, { lang: inferParserLang(id) }),
 						readFile: (id) => {
 							try {
 								// oxlint-disable-next-line typescript/no-unsafe-type-assertion

@@ -8,6 +8,11 @@ function analyze(code: string): ModuleInfo {
 	return analyzeModule(ast);
 }
 
+function analyzeTs(code: string): ModuleInfo {
+	const ast = parseAst(code, { lang: 'ts' });
+	return analyzeModule(ast);
+}
+
 describe('analyzeModule', () => {
 	describe('ESM detection', () => {
 		it('detects export const', () => {
@@ -241,6 +246,42 @@ describe('analyzeModule', () => {
 		it('returns unknown for iife', () => {
 			const info = analyze('(function() { console.log("hi"); })()');
 			expect(info.type).toBe('unknown');
+		});
+	});
+
+	describe('TypeScript sources', () => {
+		it('ignores type-only export declarations', () => {
+			const info = analyzeTs(`
+				export type { Foo } from './foo';
+				export interface Bar { a: string }
+				export const real = 1;
+			`);
+			expect(info.type).toBe('esm');
+			expect(info.namedExports).toEqual(['real']);
+		});
+
+		it('ignores type-only export specifiers', () => {
+			const info = analyzeTs(`
+				const value = 1;
+				type Alias = string;
+				export { value, type Alias };
+			`);
+			expect(info.namedExports).toEqual(['value']);
+		});
+
+		it('does not report a type-only default export', () => {
+			const info = analyzeTs("export type { Bar as default } from './bar';");
+			expect(info.type).toBe('esm');
+			expect(info.hasDefaultExport).toBe(false);
+		});
+
+		it('detects a value default export alongside type exports', () => {
+			const info = analyzeTs(`
+				export type { Foo } from './foo';
+				export default function bar(): void {}
+			`);
+			expect(info.type).toBe('esm');
+			expect(info.hasDefaultExport).toBe(true);
 		});
 	});
 

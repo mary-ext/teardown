@@ -307,8 +307,16 @@ export function analyzeModule(ast: Program): ModuleInfo {
 		if (node.type === 'ExportNamedDeclaration') {
 			type = 'esm';
 
+			if (node.exportKind === 'type') {
+				continue;
+			}
+
 			// export { a, b } or export { a } from '...'
 			for (const spec of node.specifiers) {
+				if (spec.exportKind === 'type') {
+					continue;
+				}
+
 				const exported = spec.exported;
 				let name: string;
 
