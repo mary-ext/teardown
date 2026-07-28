@@ -24,9 +24,8 @@ teardown is a bundlephobia alternative built with @rolldown/browser, using Vite 
   error messages)
 - add trailing commas
 - order list-like constructs (arrays, object keys, union/intersection members, enum variants,
-  imports, etc.) alphabetically. reserve other orderings for cases where order carries meaning —
-  semantic precedence, an external spec, or similar. if you encounter an unordered list while
-  editing nearby code, reorder it as part of the change; avoid drive-by reorders of unrelated lists
+  imports, etc.) by whatever meaning the list carries — a discriminant leads the object it tags, an
+  external spec or call signature keeps its own sequence — and alphabetically when nothing does.
 
 #### control flow and structure
 
@@ -53,10 +52,20 @@ teardown is a bundlephobia alternative built with @rolldown/browser, using Vite 
 - write code that satisfies the type system naturally; reach for `as Type` or `as const` only when
   TypeScript errors and no cleaner solution exists
 
+#### mutation
+
+- treat function arguments as immutable; callers expect their inputs to come back unchanged.
+  in-place operations like `array.sort()` or `Object.assign(target, ...)` are fine on values the
+  function owns — locals, clones, freshly constructed objects — but copy first (`array.toSorted()`,
+  `{ ...obj, ...patch }`) before touching anything reachable through a parameter. the exception is a
+  function whose documented purpose is to mutate its argument; the name and JSDoc should make that
+  intent obvious
+
 ### commit workflow
 
 we use conventional commits with these rules:
 
+- a commit represents one logical work
 - accepted types: `feat`, `fix`, `refactor`, `docs`, `chore`
   - feat
     - new additions to public API surface
@@ -64,17 +73,13 @@ we use conventional commits with these rules:
     - Markdown document changes (README.md and similar)
   - chore
     - build/tooling/dependency changes
-    - code comment-only changes (incl. JSDoc)
-    - test-only changes
+    - tests, code comments, or JSDoc changes
     - mass-autofixes from linters and formatters
+- commit type describes the substance of the change as a whole, not a category to split it by. tests
+  written for a feature ship in the `feat` commit; `chore` applies when test, comment, or JSDoc work
+  is the entire change
 - no scopes; write `feat: ...` / `refactor: ...`, never `feat(runtime): ...`
 - append `!` after the type to mark breaking changes, e.g. `feat!:` or `refactor!:`
-
-granularity — each commit represents one logical change:
-
-- split distinct changes into separate commits rather than bundling them
-- pair each README update with the commit it documents, rather than batching doc updates across
-  multiple changes
 
 ### documentation
 
@@ -87,8 +92,10 @@ granularity — each commit represents one logical change:
   - `@param` for parameters (no dashes after param names)
   - `@returns` for return values
   - `@throws` for exceptions when applicable
-  - describe _what_, not _why_, unless the rationale affects how callers use the API (e.g. a
-    constraint). put other _why_ explanations in regular code comments next to the implementation
+  - document the caller-facing contract: _what_ the API does, not _how_. implementation details
+    (anything that could change without breaking callers) and _why_ explanations belong in regular
+    code comments; the exception is rationale that constrains callers, like a precondition, which
+    stays in the JSDoc
   - keep descriptions concise but informative
 
 ### agentic coding
@@ -104,5 +111,7 @@ granularity — each commit represents one logical change:
   clarification when exploration leaves the question unresolved
 - when debugging, isolate the root cause before attempting fixes: add logging, reproduce the issue,
   narrow down the scope, and confirm the exact source of the problem
-- subagent/subtask exploration results may be inaccurate; verify findings as needed
-- read files directly rather than using subagents/subtasks as file I/O proxies
+- find and read code yourself with Grep/Glob/Read — they locate things directly and return the real
+  source. a subagent hands back only its paraphrase of what it saw, so you'd have to verify it
+  against the source anyway, and the round-trip rarely pays off: even 'where does X live?' is
+  usually one search away. reserve subagents for genuinely large parallel sweeps
