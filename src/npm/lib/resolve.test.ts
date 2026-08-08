@@ -2,17 +2,16 @@ import { describe, expect, it } from 'vitest';
 
 import { reverseJsrName, transformJsrName } from './registry';
 import { parseSpecifier, pickVersion, resolve } from './resolve';
-import type { AbbreviatedManifest } from './types';
+import type { PackumentVersion } from './types';
 
 // #region test helpers
 
-/** creates a mock manifest for testing */
-function manifest(version: string, opts: { deprecated?: string } = {}): AbbreviatedManifest {
+function manifest(version: string, opts: { deprecated?: string } = {}): PackumentVersion {
 	return {
 		name: 'test',
 		version,
 		deprecated: opts.deprecated,
-		dist: { tarball: `https://example.com/test-${version}.tgz`, shasum: 'abc' },
+		dist: { tarball: `https://example.com/test-${version}.tgz` },
 	};
 }
 
@@ -176,11 +175,11 @@ describe('pickVersion', () => {
 		const distTags = { latest: '2.0.0', next: '3.0.0-beta.1' };
 
 		it('resolves "latest" tag', () => {
-			expect(pickVersion(versions, distTags, 'latest')?.version).toBe('2.0.0');
+			expect(pickVersion(versions, distTags, 'latest')).toBe('2.0.0');
 		});
 
 		it('resolves "next" tag', () => {
-			expect(pickVersion(versions, distTags, 'next')?.version).toBe('3.0.0-beta.1');
+			expect(pickVersion(versions, distTags, 'next')).toBe('3.0.0-beta.1');
 		});
 
 		it('returns null for unknown tag', () => {
@@ -192,7 +191,7 @@ describe('pickVersion', () => {
 		});
 
 		it('treats empty string as latest', () => {
-			expect(pickVersion(versions, distTags, '')?.version).toBe('2.0.0');
+			expect(pickVersion(versions, distTags, '')).toBe('2.0.0');
 		});
 	});
 
@@ -204,15 +203,15 @@ describe('pickVersion', () => {
 		const distTags = { latest: '2.0.0' };
 
 		it('resolves exact version', () => {
-			expect(pickVersion(versions, distTags, '1.0.0')?.version).toBe('1.0.0');
+			expect(pickVersion(versions, distTags, '1.0.0')).toBe('1.0.0');
 		});
 
 		it('handles v-prefixed version', () => {
-			expect(pickVersion(versions, distTags, 'v1.0.0')?.version).toBe('1.0.0');
+			expect(pickVersion(versions, distTags, 'v1.0.0')).toBe('1.0.0');
 		});
 
 		it('handles = prefixed version', () => {
-			expect(pickVersion(versions, distTags, '= 1.0.0')?.version).toBe('1.0.0');
+			expect(pickVersion(versions, distTags, '= 1.0.0')).toBe('1.0.0');
 		});
 
 		it('returns null for non-existent version', () => {
@@ -231,43 +230,43 @@ describe('pickVersion', () => {
 		const distTags = { latest: '3.0.0' };
 
 		it('resolves caret range (^)', () => {
-			expect(pickVersion(versions, distTags, '^1.0.0')?.version).toBe('1.5.0');
+			expect(pickVersion(versions, distTags, '^1.0.0')).toBe('1.5.0');
 		});
 
 		it('resolves tilde range (~)', () => {
-			expect(pickVersion(versions, distTags, '~1.0.0')?.version).toBe('1.0.0');
+			expect(pickVersion(versions, distTags, '~1.0.0')).toBe('1.0.0');
 		});
 
 		it('resolves >= range', () => {
-			expect(pickVersion(versions, distTags, '>=2.0.0')?.version).toBe('3.0.0');
+			expect(pickVersion(versions, distTags, '>=2.0.0')).toBe('3.0.0');
 		});
 
 		it('resolves > range', () => {
-			expect(pickVersion(versions, distTags, '>2.0.0')?.version).toBe('3.0.0');
+			expect(pickVersion(versions, distTags, '>2.0.0')).toBe('3.0.0');
 		});
 
 		it('resolves < range', () => {
-			expect(pickVersion(versions, distTags, '<2.0.0')?.version).toBe('1.5.0');
+			expect(pickVersion(versions, distTags, '<2.0.0')).toBe('1.5.0');
 		});
 
 		it('resolves <= range', () => {
-			expect(pickVersion(versions, distTags, '<=2.0.0')?.version).toBe('2.0.0');
+			expect(pickVersion(versions, distTags, '<=2.0.0')).toBe('2.0.0');
 		});
 
 		it('resolves compound range (>=x <y)', () => {
-			expect(pickVersion(versions, distTags, '>=1.0.0 <2.0.0')?.version).toBe('1.5.0');
+			expect(pickVersion(versions, distTags, '>=1.0.0 <2.0.0')).toBe('1.5.0');
 		});
 
 		it('resolves hyphen range (x - y)', () => {
-			expect(pickVersion(versions, distTags, '1.0.0 - 2.0.0')?.version).toBe('2.0.0');
+			expect(pickVersion(versions, distTags, '1.0.0 - 2.0.0')).toBe('2.0.0');
 		});
 
 		it('resolves OR range (||)', () => {
-			expect(pickVersion(versions, distTags, '^1.0.0 || ^3.0.0')?.version).toBe('3.0.0');
+			expect(pickVersion(versions, distTags, '^1.0.0 || ^3.0.0')).toBe('3.0.0');
 		});
 
 		it('resolves x-range (1.x)', () => {
-			expect(pickVersion(versions, distTags, '1.x')?.version).toBe('1.5.0');
+			expect(pickVersion(versions, distTags, '1.x')).toBe('1.5.0');
 		});
 
 		it('returns null for unsatisfied range', () => {
@@ -292,18 +291,18 @@ describe('pickVersion', () => {
 		it('prefers latest over newer versions when range is satisfied', () => {
 			const distTags = { latest: '20.0.0' };
 			// 21.0.0 exists and satisfies >=18.0.0, but latest (20.0.0) should win
-			expect(pickVersion(versions, distTags, '>=18.0.0')?.version).toBe('20.0.0');
+			expect(pickVersion(versions, distTags, '>=18.0.0')).toBe('20.0.0');
 		});
 
 		it('picks newer version when latest does not satisfy range', () => {
 			const distTags = { latest: '18.0.0' };
 			// latest (18.0.0) doesn't satisfy >=20.0.0, so pick highest matching (21.0.0)
-			expect(pickVersion(versions, distTags, '>=20.0.0')?.version).toBe('21.0.0');
+			expect(pickVersion(versions, distTags, '>=20.0.0')).toBe('21.0.0');
 		});
 
 		it('prefers latest in OR ranges when satisfied', () => {
 			const distTags = { latest: '20.0.0' };
-			expect(pickVersion(versions, distTags, '^18.0.0 || ^20.0.0')?.version).toBe('20.0.0');
+			expect(pickVersion(versions, distTags, '^18.0.0 || ^20.0.0')).toBe('20.0.0');
 		});
 	});
 
@@ -320,16 +319,16 @@ describe('pickVersion', () => {
 
 		it('picks non-deprecated over deprecated when both satisfy', () => {
 			// ^3.0.0 matches 3.0.0 and 3.1.0, but 3.1.0 is deprecated
-			expect(pickVersion(versions, distTags, '^3.0.0')?.version).toBe('3.0.0');
+			expect(pickVersion(versions, distTags, '^3.0.0')).toBe('3.0.0');
 		});
 
 		it('prefers non-deprecated even if deprecated is higher', () => {
-			expect(pickVersion(versions, distTags, '>=3.0.0')?.version).toBe('3.0.0');
+			expect(pickVersion(versions, distTags, '>=3.0.0')).toBe('3.0.0');
 		});
 
 		it('uses deprecated when no non-deprecated version satisfies', () => {
 			// ^2.0.0 only matches 2.0.0 which is deprecated
-			expect(pickVersion(versions, distTags, '^2.0.0')?.version).toBe('2.0.0');
+			expect(pickVersion(versions, distTags, '^2.0.0')).toBe('2.0.0');
 		});
 
 		it('picks highest deprecated when all are deprecated', () => {
@@ -337,7 +336,7 @@ describe('pickVersion', () => {
 				'1.0.0': manifest('1.0.0', { deprecated: 'old' }),
 				'1.1.0': manifest('1.1.0', { deprecated: 'old' }),
 			};
-			expect(pickVersion(allDeprecated, { latest: '1.1.0' }, '^1.0.0')?.version).toBe('1.1.0');
+			expect(pickVersion(allDeprecated, { latest: '1.1.0' }, '^1.0.0')).toBe('1.1.0');
 		});
 	});
 
@@ -348,7 +347,7 @@ describe('pickVersion', () => {
 				'2.0.0-beta.1': manifest('2.0.0-beta.1'),
 			};
 			// ^1.0.0 should NOT match 2.0.0-beta.1
-			expect(pickVersion(versions, { latest: '1.0.0' }, '^1.0.0')?.version).toBe('1.0.0');
+			expect(pickVersion(versions, { latest: '1.0.0' }, '^1.0.0')).toBe('1.0.0');
 		});
 
 		it('prefers stable over prerelease when both satisfy', () => {
@@ -356,7 +355,7 @@ describe('pickVersion', () => {
 				'1.0.0-alpha.1': manifest('1.0.0-alpha.1'),
 				'1.0.0': manifest('1.0.0'),
 			};
-			expect(pickVersion(versions, { latest: '1.0.0' }, '>=1.0.0-alpha.1')?.version).toBe('1.0.0');
+			expect(pickVersion(versions, { latest: '1.0.0' }, '>=1.0.0-alpha.1')).toBe('1.0.0');
 		});
 
 		it('matches explicit prerelease version', () => {
@@ -364,7 +363,7 @@ describe('pickVersion', () => {
 				'1.0.0-beta.1': manifest('1.0.0-beta.1'),
 				'1.0.0-beta.2': manifest('1.0.0-beta.2'),
 			};
-			expect(pickVersion(versions, { latest: '1.0.0-beta.2' }, '1.0.0-beta.1')?.version).toBe('1.0.0-beta.1');
+			expect(pickVersion(versions, { latest: '1.0.0-beta.2' }, '1.0.0-beta.1')).toBe('1.0.0-beta.1');
 		});
 
 		it('matches prerelease range correctly', () => {
@@ -373,9 +372,7 @@ describe('pickVersion', () => {
 				'1.0.0-beta.2': manifest('1.0.0-beta.2'),
 			};
 			// ^1.0.0-beta.1 should match other 1.0.0 betas
-			expect(pickVersion(versions, { latest: '1.0.0-beta.2' }, '^1.0.0-beta.1')?.version).toBe(
-				'1.0.0-beta.2',
-			);
+			expect(pickVersion(versions, { latest: '1.0.0-beta.2' }, '^1.0.0-beta.1')).toBe('1.0.0-beta.2');
 		});
 
 		it('sorts prereleases correctly (alpha < beta < rc)', () => {
@@ -384,7 +381,7 @@ describe('pickVersion', () => {
 				'1.0.0-beta.1': manifest('1.0.0-beta.1'),
 				'1.0.0-rc.1': manifest('1.0.0-rc.1'),
 			};
-			expect(pickVersion(versions, { latest: '1.0.0-rc.1' }, '>=1.0.0-alpha.1')?.version).toBe('1.0.0-rc.1');
+			expect(pickVersion(versions, { latest: '1.0.0-rc.1' }, '>=1.0.0-alpha.1')).toBe('1.0.0-rc.1');
 		});
 
 		it('uses latest tag with wildcard when all versions are prerelease', () => {
@@ -393,14 +390,14 @@ describe('pickVersion', () => {
 				'1.0.0-beta.1': manifest('1.0.0-beta.1'),
 			};
 			// * with all prereleases should respect latest tag (pnpm/npm behavior)
-			expect(pickVersion(versions, { latest: '1.0.0-alpha.1' }, '*')?.version).toBe('1.0.0-alpha.1');
+			expect(pickVersion(versions, { latest: '1.0.0-alpha.1' }, '*')).toBe('1.0.0-alpha.1');
 		});
 
 		it('picks prerelease with wildcard when only prereleases exist', () => {
 			const versions = {
 				'1.0.0-alpha.1': manifest('1.0.0-alpha.1'),
 			};
-			expect(pickVersion(versions, { latest: '1.0.0-alpha.1' }, '*')?.version).toBe('1.0.0-alpha.1');
+			expect(pickVersion(versions, { latest: '1.0.0-alpha.1' }, '*')).toBe('1.0.0-alpha.1');
 		});
 	});
 });
@@ -438,6 +435,20 @@ describe('resolve', () => {
 				}
 			}
 			expect(isNumberVersions.size).toBeGreaterThan(0);
+		});
+	});
+
+	describe('legacy string engines field', () => {
+		it('resolves a package whose packument holds malformed sibling versions', async () => {
+			const result = await resolve(['qs']);
+
+			expect(result.roots[0]!.name).toBe('qs');
+		});
+
+		it('resolves a version carrying a malformed field of its own', async () => {
+			const result = await resolve(['qs@5.2.1']);
+
+			expect(result.roots[0]!.version).toBe('5.2.1');
 		});
 	});
 

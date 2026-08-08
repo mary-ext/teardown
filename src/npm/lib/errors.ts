@@ -39,6 +39,21 @@ export class NoMatchingVersionError extends TeardownError {
 }
 
 /**
+ * thrown when a package manifest is invalid.
+ */
+export class InvalidManifestError extends TeardownError {
+	readonly packageName: string;
+	readonly version: string;
+
+	constructor(packageName: string, version: string, reason: string) {
+		super(`invalid registry metadata for ${packageName}@${version}: ${reason}`);
+		this.name = 'InvalidManifestError';
+		this.packageName = packageName;
+		this.version = version;
+	}
+}
+
+/**
  * thrown when a package specifier is malformed.
  */
 export class InvalidSpecifierError extends TeardownError {

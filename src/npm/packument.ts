@@ -4,7 +4,7 @@ import type { Registry } from '../lib/package-name';
 
 import { fetchPackument } from './lib/registry';
 import { pickVersion } from './lib/resolve';
-import type { AbbreviatedManifest } from './lib/types';
+import type { PackumentVersion } from './lib/types';
 
 /**
  * resolved packument-level metadata for a package.
@@ -16,7 +16,7 @@ import type { AbbreviatedManifest } from './lib/types';
 export interface PackageManifest {
 	registry: Registry;
 	name: string;
-	versions: Record<string, AbbreviatedManifest>;
+	versions: Record<string, PackumentVersion>;
 	distTags: Record<string, string>;
 	/** all available versions, sorted newest first */
 	availableVersions: string[];
@@ -43,5 +43,5 @@ export async function fetchPackageManifest(registry: Registry, name: string): Pr
  * resolves a range against a package manifest, returning the matching version string.
  */
 export function pickPackageVersion(manifest: PackageManifest, range: string): string | undefined {
-	return pickVersion(manifest.versions, manifest.distTags, range)?.version;
+	return pickVersion(manifest.versions, manifest.distTags, range) ?? undefined;
 }

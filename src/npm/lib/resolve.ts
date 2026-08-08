@@ -1,12 +1,20 @@
 import * as semver from 'semver';
+import * as v from 'valibot';
 
 import { parsePackageSpecifier } from '../../lib/package-name';
 import type { Registry } from '../../lib/package-name';
 import { progress } from '../events';
 
-import { InvalidSpecifierError, NoMatchingVersionError } from './errors';
+import { InvalidManifestError, InvalidSpecifierError, NoMatchingVersionError } from './errors';
 import { fetchPackument, reverseJsrName } from './registry';
-import type { AbbreviatedManifest, PackageSpecifier, ResolvedPackage, ResolutionResult } from './types';
+import { abbreviatedManifestSchema } from './types';
+import type {
+	AbbreviatedManifest,
+	PackageSpecifier,
+	PackumentVersion,
+	ResolvedPackage,
+	ResolutionResult,
+} from './types';
 
 /**
  * parses a package specifier string into name, range, and registry.
@@ -33,34 +41,27 @@ export function parseSpecifier(spec: string): PackageSpecifier {
 }
 
 /**
- * picks the best version from a packument that satisfies a range.
- * follows npm/pnpm's algorithm:
- * 1. if range is a dist-tag, use that version
- * 2. if range is empty, treat as 'latest'
- * 3. if range is a specific version (possibly with v prefix), use that
- * 4. if 'latest' tag satisfies the range, prefer it over newer versions
- * 5. otherwise, find highest non-deprecated version that satisfies the range
- * 6. fall back to deprecated version if no non-deprecated match
- *
- * @param versions available versions (version string -> manifest)
- * @param distTags dist-tags mapping (e.g., { latest: "1.2.3" })
- * @param range the version range to satisfy
- * @returns the best matching manifest, or null if none match
+ * selects the preferred version that satisfies a range.
+ * @param versions versions by version string
+ * @param distTags dist-tags by tag
+ * @param range version range or dist-tag
+ * @returns the selected version, or null when none match
  */
 export function pickVersion(
-	versions: Record<string, AbbreviatedManifest>,
+	versions: Record<string, PackumentVersion>,
 	distTags: Record<string, string>,
 	range: string,
-): AbbreviatedManifest | null {
+): string | null {
 	// empty range means latest
 	if (range === '') {
-		return versions[distTags.latest!] ?? null;
+		const latest = distTags.latest!;
+		return latest in versions ? latest : null;
 	}
 
 	// check if range is a dist-tag
 	if (range in distTags) {
 		const taggedVersion = distTags[range]!;
-		return versions[taggedVersion] ?? null;
+		return taggedVersion in versions ? taggedVersion : null;
 	}
 
 	// normalize loose version formats (v1.0.0, = 1.0.0)
@@ -68,13 +69,13 @@ export function pickVersion(
 
 	// check if range is an exact version
 	if (versions[range]) {
-		return versions[range];
+		return range;
 	}
 
 	// check cleaned version (handles v1.0.0 -> 1.0.0)
 	const cleanedVersion = semver.clean(range, { loose: true });
 	if (cleanedVersion && versions[cleanedVersion]) {
-		return versions[cleanedVersion];
+		return cleanedVersion;
 	}
 
 	// for wildcard ranges, use loose mode to include prereleases
@@ -86,7 +87,7 @@ export function pickVersion(
 	const latestVersion = distTags.latest;
 	if (latestVersion && versions[latestVersion]) {
 		if (semver.satisfies(latestVersion, cleanedRange, satisfiesOptions)) {
-			return versions[latestVersion];
+			return latestVersion;
 		}
 	}
 
@@ -103,12 +104,20 @@ export function pickVersion(
 	// prefer non-deprecated versions (pnpm behavior)
 	const nonDeprecated = validVersions.find((v) => !versions[v]!.deprecated);
 	if (nonDeprecated !== undefined) {
-		return versions[nonDeprecated]!;
+		return nonDeprecated;
 	}
 
 	// fall back to deprecated if no alternatives
-	return versions[validVersions[0]!]!;
+	return validVersions[0]!;
 }
+
+const parseManifest = (entry: PackumentVersion, name: string, version: string): AbbreviatedManifest => {
+	const result = v.safeParse(abbreviatedManifestSchema, entry);
+	if (!result.success) {
+		throw new InvalidManifestError(name, version, result.issues[0].message);
+	}
+	return result.output;
+};
 
 /**
  * options for dependency resolution.
@@ -150,11 +159,13 @@ async function resolvePackage(
 	ctx: ResolutionContext,
 ): Promise<ResolvedPackage> {
 	const packument = await fetchPackument(name, registry);
-	const manifest = pickVersion(packument.versions, packument['dist-tags'], range);
+	const version = pickVersion(packument.versions, packument['dist-tags'], range);
 
-	if (!manifest) {
+	if (version === null) {
 		throw new NoMatchingVersionError(name, range);
 	}
+
+	const manifest = parseManifest(packument.versions[version]!, name, version);
 
 	progress.emit({ type: 'progress', kind: 'resolve', name, version: manifest.version });
 

@@ -65,50 +65,33 @@ export type PackageJson = v.InferOutput<typeof packageJsonSchema>;
  */
 const distSchema = v.object({
 	tarball: v.string(),
-	shasum: v.string(),
 	integrity: v.optional(v.string()),
-	fileCount: v.optional(v.number()),
 	unpackedSize: v.optional(v.number()),
-	signatures: v.optional(
-		v.array(
-			v.object({
-				keyid: v.string(),
-				sig: v.string(),
-			}),
-		),
-	),
 });
 
 /**
- * abbreviated manifest for a specific version.
- * picks installation-relevant fields from package.json and adds registry metadata.
+ * manifest fields used during dependency resolution.
  * @see https://github.com/npm/registry/blob/main/docs/responses/package-metadata.md#abbreviated-metadata-format
  */
 export const abbreviatedManifestSchema = v.object({
-	// pick installation-relevant fields from package.json
 	...v.pick(packageJsonSchema, [
 		'name',
 		'version',
 		'deprecated',
 		'dependencies',
-		'devDependencies',
-		'optionalDependencies',
-		'bundleDependencies',
 		'peerDependencies',
 		'peerDependenciesMeta',
-		'bin',
-		'directories',
-		'engines',
-		'cpu',
-		'os',
 	]).entries,
-	// registry-specific fields
 	dist: distSchema,
-	hasInstallScript: v.optional(v.boolean()),
-	_hasShrinkwrap: v.optional(v.boolean()),
 });
 
 export type AbbreviatedManifest = v.InferOutput<typeof abbreviatedManifestSchema>;
+
+const packumentVersionSchema = v.looseObject({
+	deprecated: v.optional(v.unknown()),
+});
+
+export type PackumentVersion = v.InferOutput<typeof packumentVersionSchema>;
 
 /**
  * abbreviated packument - minimal metadata for package resolution.
@@ -123,7 +106,7 @@ export const abbreviatedPackumentSchema = v.object({
 		v.record(v.string(), v.string()),
 		v.check((tags) => 'latest' in tags, 'dist-tags must include "latest"'),
 	),
-	versions: v.record(v.string(), abbreviatedManifestSchema),
+	versions: v.record(v.string(), packumentVersionSchema),
 });
 
 export type AbbreviatedPackument = v.InferOutput<typeof abbreviatedPackumentSchema>;
