@@ -118,12 +118,15 @@ const FieldRoot = (props: FieldRootProps) => {
 		const iconClass = `inline-block size-3 mr-1 align-[-1px] ${validationIconStyles[state]}`;
 
 		switch (state) {
-			case 'error':
+			case 'error': {
 				return <CentralCircleXSolid class={iconClass} />;
-			case 'warning':
+			}
+			case 'warning': {
 				return <CentralExclamationTriangleSolid class={iconClass} />;
-			case 'success':
+			}
+			case 'success': {
 				return <CentralCircleCheckSolid class={iconClass} />;
+			}
 		}
 	};
 

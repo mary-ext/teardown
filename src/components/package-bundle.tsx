@@ -624,10 +624,12 @@ const PackageBundle = (props: PackageBundleProps) => {
 									const p = progressState();
 
 									switch (p?.kind) {
-										case 'compress':
+										case 'compress': {
 											return <span class="text-base-300 text-neutral-foreground-2">Compressing</span>;
-										default:
+										}
+										default: {
 											return <span class="text-base-300 text-neutral-foreground-2">Bundling...</span>;
+										}
 									}
 								})()}
 							</div>

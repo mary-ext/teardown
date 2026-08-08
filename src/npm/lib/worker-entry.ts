@@ -176,12 +176,14 @@ self.onmessage = (event: MessageEvent<unknown>) => {
 	const request = parsed.output;
 
 	switch (request.type) {
-		case 'init':
+		case 'init': {
 			void handleInit(request.id, request.packageSpec, request.options);
 			break;
-		case 'bundle':
+		}
+		case 'bundle': {
 			void handleBundle(request.id, request.subpath, request.selectedExports, request.options);
 			break;
+		}
 	}
 };
 

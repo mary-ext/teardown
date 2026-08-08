@@ -11,10 +11,11 @@
 	},
 	"rules": {
 		"no-shadow": "off",
+		"typescript/consistent-return": "off",
+		"typescript/require-array-sort-compare": "off",
 		"unicorn/no-array-sort": "off",
 		"unicorn/prefer-add-event-listener": "off",
 		"unicorn/require-post-message-target-origin": "off",
-		"typescript/require-array-sort-compare": "off",
-		"typescript/consistent-return": "off"
+		"unicorn/switch-case-braces": ["warn", "always"]
 	}
 }
