@@ -1,7 +1,13 @@
+registries:
+  'https://npm.jsr.io/':
+    scopes:
+      - '@jsr'
+
 allowBuilds:
   '@rolldown/browser': false
   esbuild: true
   sharp: false
   workerd: true
+
 minimumReleaseAgeExclude:
   - '@rolldown/*'
