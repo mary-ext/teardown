@@ -14,6 +14,20 @@ export interface InstallOptions {
 	resolve?: Omit<ResolveOptions, 'onResolve'>;
 	/** fetch options */
 	fetch?: FetchOptions;
+	/**
+	 * called after each counter change.
+	 * @param counts a snapshot of the current counters
+	 */
+	onProgress?: (counts: InstallCounts) => void;
+}
+
+export interface InstallCounts {
+	/** unique packages resolved, including unused peer fallbacks */
+	resolved: number;
+	/** tarballs extracted into the store */
+	downloaded: number;
+	/** store entries linked into the layout */
+	added: number;
 }
 
 /**
@@ -41,11 +55,29 @@ export const install = async (
 	volume: Volume,
 	options: InstallOptions = {},
 ): Promise<InstallResult> => {
+	const counts: InstallCounts = { resolved: 0, downloaded: 0, added: 0 };
+	const report = () => options.onProgress?.({ ...counts });
+
 	// base store paths are independent of layout, allowing fetches during resolution
-	const store = createPackageStore(volume, options.fetch);
+	const store = createPackageStore(volume, {
+		...options.fetch,
+		onFetch() {
+			counts.downloaded++;
+			report();
+		},
+		onLink() {
+			counts.added++;
+			report();
+		},
+	});
 	const resolution = await resolve(specifiers, {
 		...options.resolve,
-		onResolve(pkg, peer) {
+		onResolve(pkg, { cached, peer }) {
+			if (!cached) {
+				counts.resolved++;
+				report();
+			}
+
 			// defer peer fallbacks until layout determines which are needed
 			if (!peer) {
 				store.add(pkg);

@@ -1,7 +1,7 @@
 import { Volume } from 'memfs';
 import { describe, expect, it } from 'vitest';
 
-import { install } from './install';
+import { install, type InstallCounts } from './install';
 
 const readJson = (volume: Volume, path: string) => {
 	// oxlint-disable-next-line typescript/no-unsafe-type-assertion
@@ -25,6 +25,20 @@ describe('install', () => {
 		await install(['is-odd@3.0.1'], volume, { fetch: { concurrency: 1 } });
 
 		expect(volume.existsSync('/node_modules/is-odd/package.json')).toBe(true);
+	});
+
+	it('reports unique packages as they resolve, download and link', async () => {
+		const volume = new Volume();
+		const reports: InstallCounts[] = [];
+		const { layout } = await install(['is-odd@3.0.1'], volume, {
+			onProgress(counts) {
+				reports.push(counts);
+			},
+		});
+
+		expect(reports.at(-1)).toEqual({ resolved: 2, downloaded: 2, added: layout.entries.size });
+		// each report advances exactly one counter
+		expect(reports.map((c) => c.resolved + c.downloaded + c.added)).toEqual(reports.map((_, idx) => idx + 1));
 	});
 
 	it('places scoped packages', async () => {

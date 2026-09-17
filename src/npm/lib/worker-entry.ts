@@ -12,12 +12,15 @@ import {
 } from '../types';
 
 import { bundlePackage } from './bundler';
-import { install } from './install';
+import { install, type InstallCounts } from './install';
 import { buildInstalledPackages } from './installed-packages';
 import { discoverSubpaths } from './subpaths';
 import type { PackageJson } from './types';
 
 const { volume } = memfs!;
+
+/** minimum interval between install progress messages, in milliseconds */
+const PROGRESS_INTERVAL = 100;
 
 // forward progress events to main thread
 progress.listen((msg) => {
@@ -42,10 +45,35 @@ let pendingBundleRequest: {
 // #region handlers
 
 async function handleInit(id: number, packageSpec: string, options: InitOptions = {}): Promise<void> {
+	// throttle worker messages to limit UI updates
+	let done = false;
+	let latest: InstallCounts | null = null;
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	const flush = () => {
+		timer = undefined;
+		if (latest !== null) {
+			progress.emit({ type: 'progress', kind: 'install', ...latest });
+			latest = null;
+			timer = setTimeout(flush, PROGRESS_INTERVAL);
+		}
+	};
+
 	try {
 		volume.reset();
 
-		const { resolution, layout } = await install([packageSpec], volume, options);
+		const { resolution, layout } = await install([packageSpec], volume, {
+			...options,
+			onProgress(counts) {
+				// in-flight fetches keep reporting after a failed install
+				if (done) {
+					return;
+				}
+				latest = counts;
+				if (timer === undefined) {
+					flush();
+				}
+			},
+		});
 
 		const mainPackage = resolution.roots[0]!;
 		const pkgJsonPath = `/node_modules/${mainPackage.name}/package.json`;
@@ -92,6 +120,9 @@ async function handleInit(id: number, packageSpec: string, options: InitOptions 
 		} satisfies WorkerResponse;
 
 		self.postMessage(event);
+	} finally {
+		done = true;
+		clearTimeout(timer);
 	}
 }
 

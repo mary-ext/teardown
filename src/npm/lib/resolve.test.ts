@@ -450,7 +450,7 @@ describe('resolve', () => {
 		it('reports peer edges as they resolve', async () => {
 			const edges: string[] = [];
 			await resolve(['zustand@4.5.7'], {
-				onResolve(pkg, peer) {
+				onResolve(pkg, { peer }) {
 					edges.push(`${pkg.name}${peer ? ' (peer)' : ''}`);
 				},
 			});

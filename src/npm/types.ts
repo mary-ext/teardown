@@ -189,20 +189,10 @@ const errorResponseSchema = v.object({
 const progressResponseSchema = v.variant('kind', [
 	v.object({
 		type: v.literal('progress'),
-		kind: v.literal('resolve'),
-		name: v.string(),
-		version: v.string(),
-	}),
-	v.object({
-		type: v.literal('progress'),
-		kind: v.literal('fetch'),
-		current: v.number(),
-		total: v.number(),
-		name: v.string(),
-	}),
-	v.object({
-		type: v.literal('progress'),
-		kind: v.literal('bundle'),
+		kind: v.literal('install'),
+		resolved: v.number(),
+		downloaded: v.number(),
+		added: v.number(),
 	}),
 	v.object({
 		type: v.literal('progress'),

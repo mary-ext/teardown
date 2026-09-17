@@ -1,10 +1,21 @@
 import type { Volume } from 'memfs';
 
-import { progress } from '../events';
-
 import { DEFAULT_EXCLUDE_PATTERNS, fetchTarballToVolume, type FetchOptions } from './fetch';
 import { getBaseId, getEntryPath } from './isolate';
-import type { IsolatedResult, ResolvedPackage } from './types';
+import type { IsolatedResult, ResolvedPackage, StoreEntry } from './types';
+
+export interface PackageStoreOptions extends FetchOptions {
+	/**
+	 * called after a tarball is extracted into the store.
+	 * @param pkg the fetched package
+	 */
+	onFetch?: (pkg: ResolvedPackage) => void;
+	/**
+	 * called when a layout entry's files are ready.
+	 * @param entry the linked entry
+	 */
+	onLink?: (entry: StoreEntry) => void;
+}
 
 /**
  * fetches packages during resolution and links the completed layout.
@@ -28,11 +39,11 @@ export interface PackageStore {
  * creates a virtual store backed by a volume, rooted at `/node_modules/.pnpm`.
  *
  * @param volume the volume to write to
- * @param options fetch options
+ * @param options fetch settings and progress callbacks
  * @returns the store
  * @throws {RangeError} if `options.concurrency` isn't a positive integer
  */
-export const createPackageStore = (volume: Volume, options: FetchOptions = {}): PackageStore => {
+export const createPackageStore = (volume: Volume, options: PackageStoreOptions = {}): PackageStore => {
 	const concurrency = options.concurrency ?? 16;
 	const exclude = options.exclude ?? DEFAULT_EXCLUDE_PATTERNS;
 
@@ -60,8 +71,6 @@ export const createPackageStore = (volume: Volume, options: FetchOptions = {}): 
 		}
 	};
 
-	let completed = 0;
-
 	const fetchPackage = (pkg: ResolvedPackage): Promise<void> => {
 		const id = getBaseId(pkg);
 
@@ -77,14 +86,7 @@ export const createPackageStore = (volume: Volume, options: FetchOptions = {}): 
 					release();
 				}
 
-				completed++;
-				progress.emit({
-					type: 'progress',
-					kind: 'fetch',
-					current: completed,
-					total: fetches.size,
-					name: pkg.name,
-				});
+				options.onFetch?.(pkg);
 			})();
 
 			// link() propagates required fetch failures; unused fetches still need a rejection handler
@@ -143,6 +145,8 @@ export const createPackageStore = (volume: Volume, options: FetchOptions = {}): 
 					if (entry.id !== baseId) {
 						copyTree(getEntryPath(baseId, entry.pkg.name), getEntryPath(entry.id, entry.pkg.name));
 					}
+
+					options.onLink?.(entry);
 				}),
 			);
 		},

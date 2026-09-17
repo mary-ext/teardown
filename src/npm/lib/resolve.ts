@@ -3,7 +3,6 @@ import * as v from 'valibot';
 
 import { parsePackageSpecifier } from '../../lib/package-name';
 import type { Registry } from '../../lib/package-name';
-import { progress } from '../events';
 
 import { InvalidManifestError, InvalidSpecifierError, NoMatchingVersionError } from './errors';
 import { applyPackageExtensions } from './package-extensions';
@@ -134,9 +133,16 @@ export interface ResolveOptions {
 	/**
 	 * called for each resolved edge, including cached packages, without waiting for dependencies.
 	 * @param pkg the resolved package; its dependencies may still be pending
-	 * @param peer whether this path passes through an auto-installed peer fallback
+	 * @param edge how the package was reached
 	 */
-	onResolve?: (pkg: ResolvedPackage, peer: boolean) => void;
+	onResolve?: (pkg: ResolvedPackage, edge: ResolvedEdge) => void;
+}
+
+export interface ResolvedEdge {
+	/** already resolved through another edge */
+	cached: boolean;
+	/** reached through an auto-installed peer fallback */
+	peer: boolean;
 }
 
 /**
@@ -182,14 +188,12 @@ async function resolvePackage(
 
 	const parsed = parseManifest(packument.versions[version]!, name, version);
 
-	progress.emit({ type: 'progress', kind: 'resolve', name, version: parsed.version });
-
 	const key = `${registry}:${name}@${parsed.version}`;
 
 	// early registration allows deduplication to terminate dependency cycles
 	const existing = ctx.resolved.get(key);
 	if (existing) {
-		ctx.onResolve?.(existing, peer);
+		ctx.onResolve?.(existing, { cached: true, peer });
 		return existing;
 	}
 
@@ -206,7 +210,7 @@ async function resolvePackage(
 	};
 
 	ctx.resolved.set(key, resolved);
-	ctx.onResolve?.(resolved, peer);
+	ctx.onResolve?.(resolved, { cached: false, peer });
 
 	// dependencies of a peer fallback are needed only if the fallback is used
 	const depsToResolve: Array<[name: string, range: string, peer: boolean]> = [];

@@ -160,21 +160,11 @@ const InstallProgress = () => {
 				const p = progressState();
 
 				switch (p?.kind) {
-					case 'resolve': {
+					case 'install': {
 						return (
-							<span class="text-base-300 text-neutral-foreground-2">
-								Resolved {p.name}@{p.version}
+							<span class="font-mono text-base-200 text-neutral-foreground-2">
+								resolved {p.resolved}, downloaded {p.downloaded}, added {p.added}
 							</span>
-						);
-					}
-					case 'fetch': {
-						return (
-							<div class="flex flex-col items-center gap-1">
-								<span class="text-base-300 text-neutral-foreground-2">Downloaded {p.name}</span>
-								<span class="text-base-200 text-neutral-foreground-3">
-									{p.current} / {p.total}
-								</span>
-							</div>
 						);
 					}
 					default: {
