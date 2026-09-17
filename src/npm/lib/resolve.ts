@@ -6,6 +6,8 @@ import type { Registry } from '../../lib/package-name';
 import { progress } from '../events';
 
 import { InvalidManifestError, InvalidSpecifierError, NoMatchingVersionError } from './errors';
+import { applyPackageExtensions } from './package-extensions';
+import { packageExtensions } from './package-extensions-data';
 import { fetchPackument, reverseJsrName } from './registry';
 import { abbreviatedManifestSchema } from './types';
 import type {
@@ -178,11 +180,11 @@ async function resolvePackage(
 		throw new NoMatchingVersionError(name, range);
 	}
 
-	const manifest = parseManifest(packument.versions[version]!, name, version);
+	const parsed = parseManifest(packument.versions[version]!, name, version);
 
-	progress.emit({ type: 'progress', kind: 'resolve', name, version: manifest.version });
+	progress.emit({ type: 'progress', kind: 'resolve', name, version: parsed.version });
 
-	const key = `${registry}:${name}@${manifest.version}`;
+	const key = `${registry}:${name}@${parsed.version}`;
 
 	// early registration allows deduplication to terminate dependency cycles
 	const existing = ctx.resolved.get(key);
@@ -190,6 +192,8 @@ async function resolvePackage(
 		ctx.onResolve?.(existing, peer);
 		return existing;
 	}
+
+	const manifest = applyPackageExtensions(parsed, packageExtensions);
 
 	const resolved: ResolvedPackage = {
 		name,

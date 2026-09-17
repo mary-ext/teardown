@@ -42,6 +42,9 @@ importers:
         specifier: ^1.4.2
         version: 1.4.2(typescript@7.0.2)
     devDependencies:
+      '@nubjs/extensions':
+        specifier: ^1.0.6
+        version: 1.0.38
       '@oxc-project/types':
         specifier: ^0.149.0
         version: 0.149.0
@@ -711,6 +714,9 @@ packages:
     peerDependencies:
       '@emnapi/core': ^1.7.1 || ^2.0.0-alpha.4
       '@emnapi/runtime': ^1.7.1 || ^2.0.0-alpha.4
+
+  '@nubjs/extensions@1.0.38':
+    resolution: {integrity: sha512-GjkivAgbSZNe1+fXs8AooYDo6HGA6pUupgSi//o3QqW1/Lfwt0LWNzZx3IkwSKzM58H+h/rebTUStDMeHTJQMw==}
 
   '@oxc-project/types@0.148.0':
     resolution: {integrity: sha512-Nm4s/jB+4FpFsPhWGEC4h7rzksesmtnMXomo6rCMcg/b8zLQuOziRgkCS1fxDCXOlJB/6Q8oABOZ/OP6RIPj9A==}
@@ -2545,6 +2551,8 @@ snapshots:
       '@emnapi/core': 2.0.0-alpha.4
       '@emnapi/runtime': 2.0.0-alpha.4
       '@tybys/wasm-util': 0.10.3
+
+  '@nubjs/extensions@1.0.38': {}
 
   '@oxc-project/types@0.148.0': {}
 

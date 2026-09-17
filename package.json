@@ -8,6 +8,7 @@
 		"build": "oxlint && vite build",
 		"preview": "vite preview",
 		"format": "oxfmt",
+		"generate:extensions": "node scripts/generate-package-extensions.ts && oxfmt src/npm/lib/package-extensions-data.ts",
 		"lint": "oxlint",
 		"test": "vitest"
 	},
@@ -25,6 +26,7 @@
 		"valibot": "^1.4.2"
 	},
 	"devDependencies": {
+		"@nubjs/extensions": "^1.0.6",
 		"@oxc-project/types": "^0.149.0",
 		"@tailwindcss/vite": "^4.3.3",
 		"@types/node": "^26.5.0",
