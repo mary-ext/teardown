@@ -438,6 +438,28 @@ describe('resolve', () => {
 		});
 	});
 
+	describe('peer dependencies', () => {
+		it('records optional peers without installing them', async () => {
+			const result = await resolve(['zustand@4.5.7']);
+			const root = result.roots[0]!;
+
+			expect([...root.peers].toSorted()).toEqual(['@types/react', 'immer', 'react']);
+			expect([...root.dependencies.keys()]).toEqual(['use-sync-external-store']);
+		});
+
+		it('reports peer edges as they resolve', async () => {
+			const edges: string[] = [];
+			await resolve(['zustand@4.5.7'], {
+				onResolve(pkg, peer) {
+					edges.push(`${pkg.name}${peer ? ' (peer)' : ''}`);
+				},
+			});
+
+			// use-sync-external-store requires react as a peer
+			expect(edges.toSorted()).toEqual(['react (peer)', 'use-sync-external-store', 'zustand']);
+		});
+	});
+
 	describe('legacy string engines field', () => {
 		it('resolves a package whose packument holds malformed sibling versions', async () => {
 			const result = await resolve(['qs']);

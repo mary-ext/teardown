@@ -1,161 +1,56 @@
 import { Volume } from 'memfs';
 import { describe, expect, it } from 'vitest';
 
-import { DEFAULT_EXCLUDE_PATTERNS, fetchPackagesToVolume } from './fetch';
-import { hoist } from './hoist';
-import { resolve } from './resolve';
+import { DEFAULT_EXCLUDE_PATTERNS, fetchTarballToVolume } from './fetch';
 
-// #region fetchPackagesToVolume
+const IS_ODD_TARBALL = 'https://registry.npmjs.org/is-odd/-/is-odd-3.0.1.tgz';
 
-describe('fetchPackagesToVolume', () => {
-	describe('basic fetching', () => {
-		it('fetches and extracts a simple package with dependencies', async () => {
-			const result = await resolve(['is-odd@3.0.1'], { installPeers: false });
-			const hoisted = hoist(result.roots);
-			const volume = new Volume();
-			await fetchPackagesToVolume(hoisted, volume);
+// #region fetchTarballToVolume
 
-			// verify is-odd
-			const isOddPackageJson = volume.readFileSync('/node_modules/is-odd/package.json', 'utf8');
-			// oxlint-disable-next-line typescript/no-unsafe-type-assertion
-			const json = JSON.parse(isOddPackageJson as string);
-			expect(json.name).toBe('is-odd');
-
-			// verify dependency (is-number)
-			const isNumberPackageJson = volume.readFileSync('/node_modules/is-number/package.json', 'utf8');
-			expect(isNumberPackageJson).toBeDefined();
-		});
-
-		it('respects concurrency limit', async () => {
-			const result = await resolve(['is-odd@3.0.1'], { installPeers: false });
-			const hoisted = hoist(result.roots);
-			const volume = new Volume();
-
-			await fetchPackagesToVolume(hoisted, volume, { concurrency: 1 });
-			expect(Object.keys(volume.toJSON()).length).toBeGreaterThan(0);
-		});
-	});
-
-	describe('scoped packages', () => {
-		it('fetches scoped packages correctly', async () => {
-			const result = await resolve(['@babel/parser@7.23.0'], { installPeers: false });
-			const hoisted = hoist(result.roots);
-			const volume = new Volume();
-			await fetchPackagesToVolume(hoisted, volume);
-
-			const packageJson = volume.readFileSync('/node_modules/@babel/parser/package.json', 'utf8');
-			// oxlint-disable-next-line typescript/no-unsafe-type-assertion
-			const json = JSON.parse(packageJson as string);
-			expect(json.name).toBe('@babel/parser');
-		});
-	});
-
-	describe('nested packages', () => {
-		it('handles version conflicts with nested packages', async () => {
-			// is-odd depends on is-number@6.x, but we also request is-number@7.x
-			const result = await resolve(['is-odd@3.0.1', 'is-number@7.0.0'], { installPeers: false });
-			const hoisted = hoist(result.roots);
-			const volume = new Volume();
-			await fetchPackagesToVolume(hoisted, volume);
-
-			// is-number@7 at root (explicitly requested)
-			const rootIsNumber = volume.readFileSync('/node_modules/is-number/package.json', 'utf8');
-			// oxlint-disable-next-line typescript/no-unsafe-type-assertion
-			const rootJson = JSON.parse(rootIsNumber as string);
-			expect(rootJson.version).toBe('7.0.0');
-
-			// is-number@6 nested under is-odd
-			const files = volume.toJSON();
-			const nestedIsNumber = Object.keys(files).find((p) => p.includes('/is-odd/node_modules/is-number/'));
-			expect(nestedIsNumber).toBeDefined();
-		});
-	});
-
-	describe('file exclusions', () => {
-		it('excludes files matching default patterns', async () => {
-			const result = await resolve(['is-odd@3.0.1'], { installPeers: false });
-			const hoisted = hoist(result.roots);
-			const volume = new Volume();
-			await fetchPackagesToVolume(hoisted, volume);
-
-			const files = volume.toJSON();
-			for (const path of Object.keys(files)) {
-				const filename = path.split('/').pop()!;
-				expect(filename.toUpperCase()).not.toMatch(/^README/);
-				expect(filename.toUpperCase()).not.toMatch(/^LICENSE/);
-			}
-		});
-
-		it('can disable exclusions with empty array', async () => {
-			const result = await resolve(['is-odd@3.0.1'], { installPeers: false });
-			const hoisted = hoist(result.roots);
-
-			const volumeNoExclude = new Volume();
-			await fetchPackagesToVolume(hoisted, volumeNoExclude, { exclude: [] });
-
-			const volumeWithExclude = new Volume();
-			await fetchPackagesToVolume(hoisted, volumeWithExclude);
-
-			const noExcludeCount = Object.keys(volumeNoExclude.toJSON()).length;
-			const withExcludeCount = Object.keys(volumeWithExclude.toJSON()).length;
-			expect(noExcludeCount).toBeGreaterThanOrEqual(withExcludeCount);
-		});
-	});
-});
-
-// #endregion
-
-// #region unpackedSize calculation
-
-describe('unpackedSize calculation', () => {
-	it('populates unpackedSize from tarball when registry does not provide it', async () => {
-		// JSR packages don't have unpackedSize in registry metadata
-		const result = await resolve(['jsr:@luca/flag@1.0.1']);
-		const hoisted = hoist(result.roots);
+describe('fetchTarballToVolume', () => {
+	it('extracts the package without its "package/" prefix', async () => {
 		const volume = new Volume();
+		await fetchTarballToVolume(IS_ODD_TARBALL, '/pkg', volume, []);
 
-		const rootNode = hoisted.root.get('@luca/flag')!;
-		expect(rootNode.unpackedSize).toBeUndefined();
-
-		await fetchPackagesToVolume(hoisted, volume);
-
-		expect(rootNode.unpackedSize).toBeGreaterThan(0);
+		expect(volume.existsSync('/pkg/package.json')).toBe(true);
+		expect(volume.existsSync('/pkg/index.js')).toBe(true);
 	});
 
-	it('preserves registry-provided unpackedSize for npm packages', async () => {
-		const result = await resolve(['is-odd@3.0.1'], { installPeers: false });
-		const hoisted = hoist(result.roots);
-		const volume = new Volume();
+	it('skips excluded files but counts them towards the size', async () => {
+		const all = new Volume();
+		const allSize = await fetchTarballToVolume(IS_ODD_TARBALL, '/pkg', all, []);
 
-		const rootNode = hoisted.root.get('is-odd')!;
-		const registrySize = rootNode.unpackedSize;
-		expect(registrySize).toBeGreaterThan(0);
+		const filtered = new Volume();
+		const filteredSize = await fetchTarballToVolume(
+			IS_ODD_TARBALL,
+			'/pkg',
+			filtered,
+			DEFAULT_EXCLUDE_PATTERNS,
+		);
 
-		await fetchPackagesToVolume(hoisted, volume);
+		expect(all.existsSync('/pkg/README.md')).toBe(true);
+		expect(all.existsSync('/pkg/LICENSE')).toBe(true);
+		expect(filtered.existsSync('/pkg/README.md')).toBe(false);
+		expect(filtered.existsSync('/pkg/LICENSE')).toBe(false);
 
-		expect(rootNode.unpackedSize).toBe(registrySize);
-	});
-
-	it('includes excluded files in size calculation', async () => {
-		const result = await resolve(['is-odd@3.0.1'], { installPeers: false });
-		const hoisted = hoist(result.roots);
-
-		// clear registry-provided size to force calculation from tarball
-		const rootNode = hoisted.root.get('is-odd')!;
-		rootNode.unpackedSize = undefined;
-
-		const volume = new Volume();
-		await fetchPackagesToVolume(hoisted, volume);
-
-		const extractedFiles = volume.toJSON();
-		const extractedSize = Object.values(extractedFiles).reduce(
+		expect(filteredSize).toBe(allSize);
+		const extracted = Object.values(filtered.toJSON()).reduce(
 			// oxlint-disable-next-line typescript/no-unsafe-type-assertion
 			(sum, content) => sum + (content as string).length,
 			0,
 		);
+		expect(filteredSize).toBeGreaterThan(extracted);
+	});
 
-		// tarball size >= extracted size (includes excluded files)
-		expect(rootNode.unpackedSize).toBeGreaterThanOrEqual(extractedSize);
+	it('rejects when the tarball is missing', async () => {
+		await expect(
+			fetchTarballToVolume(
+				'https://registry.npmjs.org/is-odd/-/is-odd-0.0.0-missing.tgz',
+				'/pkg',
+				new Volume(),
+				[],
+			),
+		).rejects.toThrow();
 	});
 });
 

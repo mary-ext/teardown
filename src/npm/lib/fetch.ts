@@ -1,16 +1,13 @@
 import { untar } from '@mary/tar';
 import type { Volume } from 'memfs';
 
-import { progress } from '../events';
-
 import { FetchError } from './errors';
-import type { HoistedNode, HoistedResult } from './types';
 
 /**
  * options for fetching packages.
  */
 export interface FetchOptions {
-	/** max concurrent fetches (default 6) */
+	/** max concurrent fetches, a positive integer (default 16) */
 	concurrency?: number;
 	/** regex patterns for files to exclude (matched against path after "package/" prefix is stripped) */
 	exclude?: RegExp[];
@@ -80,13 +77,14 @@ export const DEFAULT_EXCLUDE_PATTERNS: RegExp[] = [
  * @param destPath the destination path in the volume (e.g., "/node_modules/react")
  * @param volume the volume to write to
  * @param exclude regex patterns for files to skip
- * @returns the total size of extracted files in bytes
+ * @returns total file size in bytes, including excluded files
+ * @throws {FetchError} if the tarball can't be fetched
  */
-async function fetchTarballToVolume(
+export async function fetchTarballToVolume(
 	url: string,
 	destPath: string,
 	volume: Volume,
-	exclude: RegExp[] = [],
+	exclude: RegExp[],
 ): Promise<number> {
 	const response = await fetch(url);
 	if (!response.ok) {
@@ -134,69 +132,4 @@ async function fetchTarballToVolume(
 	}
 
 	return totalSize;
-}
-
-/**
- * fetches all packages in a hoisted result and writes them to a volume.
- * uses default exclude patterns to skip unnecessary files.
- *
- * @param hoisted the hoisted package structure
- * @param volume the volume to write to
- * @param options fetch options
- */
-export async function fetchPackagesToVolume(
-	hoisted: HoistedResult,
-	volume: Volume,
-	options: FetchOptions = {},
-): Promise<void> {
-	const concurrency = options.concurrency ?? 6;
-	const exclude = options.exclude ?? DEFAULT_EXCLUDE_PATTERNS;
-	const queue: Array<{ node: HoistedNode; basePath: string }> = [];
-
-	// collect all nodes into a flat queue
-	function collectNodes(node: HoistedNode, basePath: string): void {
-		queue.push({ node, basePath });
-		if (node.nested.size > 0) {
-			const nestedBasePath = `${basePath}/${node.name}/node_modules`;
-			for (const nested of node.nested.values()) {
-				collectNodes(nested, nestedBasePath);
-			}
-		}
-	}
-
-	for (const node of hoisted.root.values()) {
-		collectNodes(node, '/node_modules');
-	}
-
-	// process queue with concurrency limit using a simple semaphore pattern
-	let index = 0;
-	let completed = 0;
-	const total = queue.length;
-
-	async function worker(): Promise<void> {
-		while (true) {
-			const i = index++;
-			if (i >= queue.length) {
-				break;
-			}
-
-			const { node, basePath } = queue[i]!;
-			const packagePath = `${basePath}/${node.name}`;
-
-			// oxlint-disable-next-line no-await-in-loop
-			const extractedSize = await fetchTarballToVolume(node.tarball, packagePath, volume, exclude);
-
-			// use extracted size if registry didn't provide unpackedSize (e.g., JSR packages)
-			if (node.unpackedSize === undefined) {
-				node.unpackedSize = extractedSize;
-			}
-
-			completed++;
-			progress.emit({ type: 'progress', kind: 'fetch', current: completed, total, name: node.name });
-		}
-	}
-
-	// start concurrent workers
-	const workers = Array.from({ length: Math.min(concurrency, queue.length) }, () => worker());
-	await Promise.all(workers);
 }

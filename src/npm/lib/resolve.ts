@@ -129,6 +129,12 @@ export interface ResolveOptions {
 	 * @default true
 	 */
 	installPeers?: boolean;
+	/**
+	 * called for each resolved edge, including cached packages, without waiting for dependencies.
+	 * @param pkg the resolved package; its dependencies may still be pending
+	 * @param peer whether this path passes through an auto-installed peer fallback
+	 */
+	onResolve?: (pkg: ResolvedPackage, peer: boolean) => void;
 }
 
 /**
@@ -137,25 +143,32 @@ export interface ResolveOptions {
 interface ResolutionContext {
 	/** all resolved packages by "registry:name@version" key for deduping */
 	resolved: Map<string, ResolvedPackage>;
-	/** packages currently being resolved (for cycle detection) */
-	resolving: Set<string>;
-	/** resolution options */
-	options: Required<ResolveOptions>;
+	/** whether required peer dependencies are auto-installed */
+	installPeers: boolean;
+	onResolve: ResolveOptions['onResolve'];
+}
+
+/**
+ * a dependency edge to resolve.
+ */
+interface Edge {
+	name: string;
+	/** version range to satisfy */
+	range: string;
+	registry: Registry;
+	/** whether the edge only exists through an auto-installed peer dependency */
+	peer: boolean;
 }
 
 /**
  * resolves a single package and its dependencies recursively.
  *
- * @param name package name
- * @param range version range to satisfy
- * @param registry which registry to fetch from
- * @param ctx resolution context for deduping and cycle detection
+ * @param edge the dependency edge to resolve
+ * @param ctx resolution context for deduping
  * @returns the resolved package tree
  */
 async function resolvePackage(
-	name: string,
-	range: string,
-	registry: Registry,
+	{ name, range, registry, peer }: Edge,
 	ctx: ResolutionContext,
 ): Promise<ResolvedPackage> {
 	const packument = await fetchPackument(name, registry);
@@ -171,29 +184,13 @@ async function resolvePackage(
 
 	const key = `${registry}:${name}@${manifest.version}`;
 
-	// check if already resolved (deduplication)
+	// early registration allows deduplication to terminate dependency cycles
 	const existing = ctx.resolved.get(key);
 	if (existing) {
+		ctx.onResolve?.(existing, peer);
 		return existing;
 	}
 
-	// cycle detection - if we're already resolving this, return a placeholder
-	// the actual dependencies will be filled in by the original resolution
-	if (ctx.resolving.has(key)) {
-		// create a minimal resolved package for the cycle
-		const cyclic: ResolvedPackage = {
-			name,
-			version: manifest.version,
-			tarball: manifest.dist.tarball,
-			integrity: manifest.dist.integrity,
-			dependencies: new Map(),
-		};
-		return cyclic;
-	}
-
-	ctx.resolving.add(key);
-
-	// create the resolved package
 	const resolved: ResolvedPackage = {
 		name,
 		version: manifest.version,
@@ -201,39 +198,41 @@ async function resolvePackage(
 		integrity: manifest.dist.integrity,
 		unpackedSize: manifest.dist.unpackedSize,
 		dependencies: new Map(),
+		peers: new Set(),
 	};
 
-	// register early so cycles can find it
 	ctx.resolved.set(key, resolved);
+	ctx.onResolve?.(resolved, peer);
 
-	// collect all dependencies to resolve (regular deps + peer deps)
-	const depsToResolve: Array<[string, string]> = [];
+	// dependencies of a peer fallback are needed only if the fallback is used
+	const depsToResolve: Array<[name: string, range: string, peer: boolean]> = [];
 
 	// add regular dependencies
 	const deps = manifest.dependencies ?? {};
 	for (const [depName, depRange] of Object.entries(deps)) {
-		depsToResolve.push([depName, depRange]);
+		depsToResolve.push([depName, depRange, peer]);
 	}
 
-	// add peer dependencies as regular dependencies of this package
-	// this ensures they get hoisted correctly - placed at root if no conflict,
-	// or nested under this package if there's a version conflict
-	if (ctx.options.installPeers && manifest.peerDependencies) {
+	// resolve required peers as fallbacks for peers not provided by ancestors
+	if (manifest.peerDependencies) {
 		const peerMeta = manifest.peerDependenciesMeta ?? {};
 		for (const [peerName, peerRange] of Object.entries(manifest.peerDependencies)) {
-			const isOptional = peerMeta[peerName]?.optional === true;
-			if (!isOptional) {
-				// only add if not already in regular deps (regular deps take precedence)
-				if (!(peerName in deps)) {
-					depsToResolve.push([peerName, peerRange]);
-				}
+			// regular deps take precedence
+			if (peerName in deps) {
+				continue;
+			}
+
+			resolved.peers.add(peerName);
+
+			if (ctx.installPeers && peerMeta[peerName]?.optional !== true) {
+				depsToResolve.push([peerName, peerRange, true]);
 			}
 		}
 	}
 
 	// resolve all dependencies in parallel
 	const resolvedDeps = await Promise.all(
-		depsToResolve.map(async ([depName, depRange]) => {
+		depsToResolve.map(async ([depName, depRange, depPeer]) => {
 			// when a JSR package depends on @jsr/*, reverse to canonical name and fetch from JSR
 			// otherwise use npm (even for @jsr/* from npm packages - that's what the author intended)
 			let resolvedName = depName;
@@ -242,7 +241,10 @@ async function resolvePackage(
 				resolvedName = reverseJsrName(depName);
 				depRegistry = 'jsr';
 			}
-			const dep = await resolvePackage(resolvedName, depRange, depRegistry, ctx);
+			const dep = await resolvePackage(
+				{ name: resolvedName, range: depRange, registry: depRegistry, peer: depPeer },
+				ctx,
+			);
 			return [depName, dep] as const;
 		}),
 	);
@@ -251,7 +253,6 @@ async function resolvePackage(
 		resolved.dependencies.set(depName, dep);
 	}
 
-	ctx.resolving.delete(key);
 	return resolved;
 }
 
@@ -266,16 +267,16 @@ async function resolvePackage(
 export async function resolve(specifiers: string[], options: ResolveOptions = {}): Promise<ResolutionResult> {
 	const ctx: ResolutionContext = {
 		resolved: new Map(),
-		resolving: new Set(),
-		options: {
-			installPeers: options.installPeers ?? true,
-		},
+		installPeers: options.installPeers ?? true,
+		onResolve: options.onResolve,
 	};
 
 	const parsedSpecs = specifiers.map(parseSpecifier);
 
 	const roots = await Promise.all(
-		parsedSpecs.map(({ name, range, registry }) => resolvePackage(name, range, registry, ctx)),
+		parsedSpecs.map(({ name, range, registry }) =>
+			resolvePackage({ name, range, registry, peer: false }, ctx),
+		),
 	);
 
 	return {

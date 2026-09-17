@@ -1,12 +1,67 @@
 import { describe, expect, it } from 'vitest';
 
 import { buildInstalledPackages } from './installed-packages';
+import { isolate } from './isolate';
 import { resolve } from './resolve';
+import type { ResolutionResult, ResolvedPackage } from './types';
+
+const build = (result: ResolutionResult, peerDepNames: Set<string>) => {
+	return buildInstalledPackages(isolate(result.roots), result.roots[0]!.name, peerDepNames);
+};
+
+const pkg = (spec: string, deps: ResolvedPackage[] = [], peers: string[] = []): ResolvedPackage => {
+	const [name, version = '1.0.0'] = spec.split('@');
+	return {
+		name: name!,
+		version,
+		tarball: `https://registry.npmjs.org/${name}/-/${name}-${version}.tgz`,
+		unpackedSize: 100,
+		dependencies: new Map(deps.map((d) => [d.name, d])),
+		peers: new Set(peers),
+	};
+};
 
 describe('buildInstalledPackages', () => {
+	it('lists each package version once across peer-specialised entries', () => {
+		const lib = pkg('lib', [], ['react']);
+		const app = pkg('app', [pkg('a', [pkg('react@17.0.0'), lib]), pkg('b', [pkg('react'), lib])]);
+		const packages = buildInstalledPackages(isolate([app]), 'app', new Set());
+
+		expect(packages.map((p) => `${p.name}@${p.version}`).toSorted()).toEqual([
+			'a@1.0.0',
+			'app@1.0.0',
+			'b@1.0.0',
+			'lib@1.0.0',
+			'react@1.0.0',
+			'react@17.0.0',
+		]);
+
+		const libInfo = packages.find((p) => p.name === 'lib')!;
+		expect(libInfo.level).toBe(2);
+		expect(libInfo.dependencies.map((d) => d.version).toSorted()).toEqual(['1.0.0', '17.0.0']);
+		expect(libInfo.dependents.map((d) => d.name).toSorted()).toEqual(['a', 'b']);
+	});
+
+	it('leaves out auto-installed peers that a dependent provides', () => {
+		const lib = pkg('lib', [pkg('react@19.0.0')], ['react']);
+		const app = pkg('app', [pkg('react'), lib]);
+		const packages = buildInstalledPackages(isolate([app]), 'app', new Set());
+
+		expect(packages.filter((p) => p.name === 'react').map((p) => p.version)).toEqual(['1.0.0']);
+	});
+
+	it('clears peer-only status for packages also reachable through regular dependencies', () => {
+		const shared = pkg('shared');
+		const app = pkg('app', [pkg('peer', [shared]), pkg('dep', [pkg('deeper', [shared])])], ['peer']);
+		const packages = buildInstalledPackages(isolate([app]), 'app', new Set(['peer']));
+
+		const status = Object.fromEntries(packages.map((p) => [p.name, p.isPeer]));
+		expect(status).toEqual({ app: false, dep: false, deeper: false, peer: true, shared: false });
+	});
+
 	it('builds packages from a simple dependency tree', async () => {
 		const result = await resolve(['is-odd@3.0.1']);
-		const packages = buildInstalledPackages(result.roots[0]!, new Set());
+		const packages = build(result, new Set());
 
 		// should have is-odd and is-number
 		const names = packages.map((p) => p.name);
@@ -25,7 +80,7 @@ describe('buildInstalledPackages', () => {
 
 	it('correctly sets dependents', async () => {
 		const result = await resolve(['is-odd@3.0.1']);
-		const packages = buildInstalledPackages(result.roots[0]!, new Set());
+		const packages = build(result, new Set());
 
 		// is-odd is the root, no dependents
 		const isOdd = packages.find((p) => p.name === 'is-odd')!;
@@ -39,7 +94,7 @@ describe('buildInstalledPackages', () => {
 
 	it('correctly sets dependencies', async () => {
 		const result = await resolve(['is-odd@3.0.1']);
-		const packages = buildInstalledPackages(result.roots[0]!, new Set());
+		const packages = build(result, new Set());
 
 		// is-odd has 1 dependency (is-number)
 		const isOdd = packages.find((p) => p.name === 'is-odd')!;
@@ -51,7 +106,7 @@ describe('buildInstalledPackages', () => {
 		// use-sync-external-store has react as a peer dependency
 		const result = await resolve(['use-sync-external-store@1.2.0']);
 		const peerDepNames = new Set(['react']);
-		const packages = buildInstalledPackages(result.roots[0]!, peerDepNames);
+		const packages = build(result, peerDepNames);
 
 		// react and its deps should be marked as peer
 		const react = packages.find((p) => p.name === 'react');
@@ -74,7 +129,7 @@ describe('buildInstalledPackages', () => {
 		// loose-envify should be marked as peer (only reachable through react)
 		const result = await resolve(['use-sync-external-store@1.2.0']);
 		const peerDepNames = new Set(['react']);
-		const packages = buildInstalledPackages(result.roots[0]!, peerDepNames);
+		const packages = build(result, peerDepNames);
 
 		const looseEnvify = packages.find((p) => p.name === 'loose-envify');
 		// loose-envify is a dep of react, which is peer-only
@@ -90,7 +145,7 @@ describe('buildInstalledPackages', () => {
 
 		// pretend is-number is also a peer dep (but it's already a regular dep)
 		const peerDepNames = new Set(['is-number']);
-		const packages = buildInstalledPackages(result.roots[0]!, peerDepNames);
+		const packages = build(result, peerDepNames);
 
 		// is-number should be marked as peer because it's a direct peer dep of root
 		const isNumber = packages.find((p) => p.name === 'is-number')!;
@@ -103,7 +158,7 @@ describe('buildInstalledPackages', () => {
 		// graphql should still be marked as peer since it's a direct peer dep of root
 		const result = await resolve(['graphql-request@7.4.0']);
 		const peerDepNames = new Set(['graphql']);
-		const packages = buildInstalledPackages(result.roots[0]!, peerDepNames);
+		const packages = build(result, peerDepNames);
 
 		// graphql should be marked as peer
 		const graphql = packages.find((p) => p.name === 'graphql');

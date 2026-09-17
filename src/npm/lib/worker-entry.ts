@@ -12,10 +12,8 @@ import {
 } from '../types';
 
 import { bundlePackage } from './bundler';
-import { fetchPackagesToVolume } from './fetch';
-import { hoist } from './hoist';
+import { install } from './install';
 import { buildInstalledPackages } from './installed-packages';
-import { resolve } from './resolve';
 import { discoverSubpaths } from './subpaths';
 import type { PackageJson } from './types';
 
@@ -47,10 +45,7 @@ async function handleInit(id: number, packageSpec: string, options: InitOptions 
 	try {
 		volume.reset();
 
-		const resolution = await resolve([packageSpec], options.resolve);
-		const hoisted = hoist(resolution.roots);
-
-		await fetchPackagesToVolume(hoisted, volume, options.fetch);
+		const { resolution, layout } = await install([packageSpec], volume, options);
 
 		const mainPackage = resolution.roots[0]!;
 		const pkgJsonPath = `/node_modules/${mainPackage.name}/package.json`;
@@ -63,11 +58,11 @@ async function handleInit(id: number, packageSpec: string, options: InitOptions 
 
 		const subpaths = discoverSubpaths(manifest, volume);
 
-		// get peer dependency names from manifest
-		const peerDependencies = Object.keys(manifest.peerDependencies ?? {});
-		const peerDepNames = new Set(peerDependencies);
+		// include resolved peers and peers also declared as regular dependencies
+		const peerDepNames = new Set([...Object.keys(manifest.peerDependencies ?? {}), ...mainPackage.peers]);
+		const peerDependencies = [...peerDepNames];
 
-		const packages = buildInstalledPackages(mainPackage, peerDepNames);
+		const packages = buildInstalledPackages(layout, mainPackage.name, peerDepNames);
 		const installSize = packages.reduce((sum, pkg) => sum + pkg.size, 0);
 
 		initResult = {

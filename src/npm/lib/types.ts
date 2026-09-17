@@ -114,8 +114,7 @@ export type AbbreviatedPackument = v.InferOutput<typeof abbreviatedPackumentSche
 // #endregion
 
 /**
- * a resolved package with its dependencies.
- * this is the output of the resolution step before hoisting.
+ * a resolved package before layout.
  */
 export interface ResolvedPackage {
 	name: string;
@@ -126,8 +125,12 @@ export interface ResolvedPackage {
 	integrity?: string;
 	/** unpacked size in bytes (from registry) */
 	unpackedSize?: number;
-	/** resolved dependencies (name -> ResolvedPackage) */
+	/** resolved dependencies (name -> ResolvedPackage), including auto-installed peers */
 	dependencies: Map<string, ResolvedPackage>;
+	/**
+	 * peer names, including optional peers, excluding names declared as regular dependencies
+	 */
+	peers: Set<string>;
 }
 
 /**
@@ -153,26 +156,32 @@ export interface ResolutionResult {
 }
 
 /**
- * a node in the hoisted node_modules structure.
- * represents what should be written to node_modules/{name}
+ * a package instance at
+ * `/node_modules/.pnpm/{id}/node_modules/{pkg.name}`.
  */
-export interface HoistedNode {
-	name: string;
-	version: string;
-	tarball: string;
-	integrity?: string;
-	/** unpacked size in bytes (from registry) */
-	unpackedSize?: number;
-	/** number of direct dependencies */
-	dependencyCount: number;
-	/** nested node_modules for this package (when hoisting fails) */
-	nested: Map<string, HoistedNode>;
+export interface StoreEntry {
+	/**
+	 * directory name under `/node_modules/.pnpm`: encoded `name@version` with peer-context
+	 * suffixes, truncated with a hash if needed
+	 */
+	id: string;
+	/** the package this entry is an instance of */
+	pkg: ResolvedPackage;
+	/** links placed next to the package, by dependency name -> target entry id */
+	links: Map<string, string>;
 }
 
 /**
- * the result of hoisting - a flat(ish) node_modules structure.
+ * a virtual store layout and its external links.
  */
-export interface HoistedResult {
-	/** top-level node_modules entries */
-	root: Map<string, HoistedNode>;
+export interface IsolatedResult {
+	/** every store entry by id */
+	entries: Map<string, StoreEntry>;
+	/** links under `/node_modules`, by package name -> entry id */
+	roots: Map<string, string>;
+	/**
+	 * fallback links for undeclared imports under `/node_modules/.pnpm/node_modules`,
+	 * by package name -> entry id
+	 */
+	hoisted: Map<string, string>;
 }

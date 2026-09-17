@@ -1,123 +1,115 @@
 import type { InstalledPackage, PackageRef } from '../types';
 
-import type { ResolvedPackage } from './types';
+import { getBaseId } from './isolate';
+import type { IsolatedResult, ResolvedPackage, StoreEntry } from './types';
+
+interface PackageInfo {
+	pkg: ResolvedPackage;
+	level: number;
+	peerOnly: boolean;
+	dependents: Map<string, PackageRef>;
+	dependencies: Map<string, PackageRef>;
+}
+
+interface Edge {
+	from: StoreEntry;
+	to: StoreEntry;
+	/** whether this edge is a peer dependency of the root */
+	peer: boolean;
+	/** whether this traversal path passes through a root peer */
+	peerOnly: boolean;
+}
 
 /**
- * builds the installed packages list from the resolved dependency tree.
- * also identifies which packages are only reachable through peer dependencies.
+ * lists packages reachable from the root, marking those reachable only through root peers.
  *
- * @param root the root resolved package
+ * @param layout the isolated layout
+ * @param rootName name of the root package
  * @param peerDepNames names of the root package's peer dependencies
- * @returns array of installed packages with peer status
+ * @returns array of installed packages with peer status, one per package version
  */
-export function buildInstalledPackages(root: ResolvedPackage, peerDepNames: Set<string>): InstalledPackage[] {
-	// collect all unique packages and compute levels
-	const packageMap = new Map<
-		string,
-		{
-			pkg: ResolvedPackage;
-			level: number;
-			dependents: PackageRef[];
-			dependencies: PackageRef[];
+export const buildInstalledPackages = (
+	layout: IsolatedResult,
+	rootName: string,
+	peerDepNames: Set<string>,
+): InstalledPackage[] => {
+	const rootEntry = layout.entries.get(layout.roots.get(rootName)!)!;
+
+	const packages = new Map<string, PackageInfo>();
+	const getInfo = (entry: StoreEntry, level: number): PackageInfo => {
+		const key = getBaseId(entry.pkg);
+		let info = packages.get(key);
+		if (info === undefined) {
+			info = { pkg: entry.pkg, level, peerOnly: true, dependents: new Map(), dependencies: new Map() };
+			packages.set(key, info);
 		}
-	>();
+		return info;
+	};
 
-	// track which packages are reachable without going through peer deps
-	const reachableWithoutPeers = new Set<string>();
+	getInfo(rootEntry, 0).peerOnly = false;
 
-	// first pass: collect packages and compute levels
-	{
-		const visited = new Set<string>();
+	// breadth-first traversal records minimum depth. revisit entries reached without peers
+	// to clear peer-only status in their dependencies.
+	const walked = new Set<StoreEntry>([rootEntry]);
+	const walkedWithoutPeers = new Set<StoreEntry>([rootEntry]);
 
-		function walk(pkg: ResolvedPackage, level: number, inPeerSubtree: boolean): void {
-			const key = `${pkg.name}@${pkg.version}`;
+	let queue: Array<{ entry: StoreEntry; peerOnly: boolean }> = [{ entry: rootEntry, peerOnly: false }];
+	for (let level = 1; queue.length > 0; level++) {
+		// visit non-peer paths first to avoid redundant peer-only traversals
+		const regular: Edge[] = [];
+		const viaPeers: Edge[] = [];
+		for (const { entry, peerOnly } of queue) {
+			for (const [name, targetId] of entry.links) {
+				const peer = entry === rootEntry && peerDepNames.has(name);
+				const edge: Edge = {
+					from: entry,
+					to: layout.entries.get(targetId)!,
+					peer,
+					peerOnly: peerOnly || peer,
+				};
+				(edge.peerOnly ? viaPeers : regular).push(edge);
+			}
+		}
 
-			// update level to shortest path
-			const existing = packageMap.get(key);
-			if (existing) {
-				if (level < existing.level) {
-					existing.level = level;
+		const next: typeof queue = [];
+		for (const { from, to, peer, peerOnly } of [...regular, ...viaPeers]) {
+			const source = getInfo(from, level - 1);
+			const dest = getInfo(to, level);
+			if (!peerOnly) {
+				dest.peerOnly = false;
+			}
+
+			source.dependencies.set(getBaseId(to.pkg), {
+				name: to.pkg.name,
+				version: to.pkg.version,
+				isPeer: peer,
+			});
+			dest.dependents.set(getBaseId(from.pkg), {
+				name: from.pkg.name,
+				version: from.pkg.version,
+				isPeer: peer,
+			});
+
+			if (!walked.has(to) || (!peerOnly && !walkedWithoutPeers.has(to))) {
+				walked.add(to);
+				if (!peerOnly) {
+					walkedWithoutPeers.add(to);
 				}
-			} else {
-				packageMap.set(key, { pkg, level, dependents: [], dependencies: [] });
+				next.push({ entry: to, peerOnly });
 			}
-
-			// track if reachable without peers
-			if (!inPeerSubtree) {
-				reachableWithoutPeers.add(key);
-			}
-
-			// avoid infinite loops from cycles
-			if (visited.has(key)) {
-				return;
-			}
-			visited.add(key);
-
-			for (const [depName, dep] of pkg.dependencies) {
-				// check if this edge goes through a root peer dep
-				const isPeerEdge = pkg === root && peerDepNames.has(depName);
-				walk(dep, level + 1, inPeerSubtree || isPeerEdge);
-			}
-
-			visited.delete(key);
 		}
 
-		walk(root, 0, false);
+		queue = next;
 	}
 
-	// second pass: build dependency/dependent relationships
-	// we need to read peerDependencies from each package's manifest
-	for (const [_key, entry] of packageMap) {
-		const pkg = entry.pkg;
-
-		for (const [depName, dep] of pkg.dependencies) {
-			const depKey = `${dep.name}@${dep.version}`;
-			const depEntry = packageMap.get(depKey);
-			if (!depEntry) {
-				continue;
-			}
-
-			// check if this is a peer dependency edge by looking at the manifest
-			// note: during resolution, peer deps are added to dependencies map
-			// we need to check the original peerDependencies field
-			const isPeerDep = pkg === root && peerDepNames.has(depName);
-
-			// add to this package's dependencies
-			entry.dependencies.push({
-				name: dep.name,
-				version: dep.version,
-				isPeer: isPeerDep,
-			});
-
-			// add to the dependency's dependents
-			depEntry.dependents.push({
-				name: pkg.name,
-				version: pkg.version,
-				isPeer: isPeerDep,
-			});
-		}
-	}
-
-	// build final array
-	const packages: InstalledPackage[] = [];
-	for (const [key, { pkg, level, dependents, dependencies }] of packageMap) {
-		// a package is a peer if:
-		// 1. it's a direct peer dependency of the root, OR
-		// 2. it's only reachable through peer dependency subtrees
-		const isDirectPeerOfRoot = peerDepNames.has(pkg.name);
-		const isOnlyReachableThroughPeers = !reachableWithoutPeers.has(key);
-
-		packages.push({
-			name: pkg.name,
-			version: pkg.version,
-			size: pkg.unpackedSize ?? 0,
-			path: `node_modules/${pkg.name}`,
-			level,
-			dependents,
-			dependencies,
-			isPeer: isDirectPeerOfRoot || isOnlyReachableThroughPeers,
-		});
-	}
-
-	return packages;
-}
+	return Array.from(packages.values(), ({ pkg, level, peerOnly, dependents, dependencies }) => ({
+		name: pkg.name,
+		version: pkg.version,
+		size: pkg.unpackedSize ?? 0,
+		level,
+		dependents: [...dependents.values()],
+		dependencies: [...dependencies.values()],
+		// direct root peers retain peer status even when reachable without peers
+		isPeer: peerDepNames.has(pkg.name) || peerOnly,
+	}));
+};

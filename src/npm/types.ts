@@ -7,7 +7,7 @@ const resolveOptionsSchema = v.object({
 });
 
 const fetchOptionsSchema = v.object({
-	concurrency: v.optional(v.number()),
+	concurrency: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
 	exclude: v.optional(v.array(v.instance(RegExp))),
 });
 
@@ -62,7 +62,6 @@ const installedPackageSchema = v.object({
 	name: v.string(),
 	version: v.string(),
 	size: v.number(),
-	path: v.string(),
 	level: v.number(),
 	dependents: v.array(packageRefSchema),
 	dependencies: v.array(packageRefSchema),
