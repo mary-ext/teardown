@@ -17,7 +17,7 @@ const pkg = (spec: string, deps: ResolvedPackage[] = [], peers: string[] = []): 
 		tarball: `https://registry.npmjs.org/${name}/-/${name}-${version}.tgz`,
 		unpackedSize: 100,
 		dependencies: new Map(deps.map((d) => [d.name, d])),
-		peers: new Set(peers),
+		peers: new Map(peers.map((peer) => [peer, '*'])),
 	};
 };
 

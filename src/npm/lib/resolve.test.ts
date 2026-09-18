@@ -528,7 +528,7 @@ describe('resolve', () => {
 			const result = await resolve(['zustand@4.5.7']);
 			const root = result.roots[0]!;
 
-			expect([...root.peers].toSorted()).toEqual(['@types/react', 'immer', 'react']);
+			expect([...root.peers.keys()].toSorted()).toEqual(['@types/react', 'immer', 'react']);
 			expect([...root.dependencies.keys()]).toEqual(['use-sync-external-store']);
 		});
 

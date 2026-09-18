@@ -283,7 +283,7 @@ async function resolvePackage(
 		integrity: manifest.dist.integrity,
 		unpackedSize: manifest.dist.unpackedSize,
 		dependencies: new Map(),
-		peers: new Set(),
+		peers: new Map(),
 	};
 
 	ctx.resolved.set(key, resolved);
@@ -316,7 +316,7 @@ async function resolvePackage(
 				continue;
 			}
 
-			resolved.peers.add(peerName);
+			resolved.peers.set(peerName, peerRange);
 
 			if (ctx.installPeers && peerMeta[peerName]?.optional !== true) {
 				depsToResolve.push([peerName, peerRange, true]);

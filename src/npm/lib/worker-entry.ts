@@ -87,7 +87,10 @@ async function handleInit(id: number, packageSpec: string, options: InitOptions 
 		const subpaths = discoverSubpaths(manifest, volume);
 
 		// include extension-added peers and peers also declared as regular dependencies
-		const peerDepNames = new Set([...Object.keys(manifest.peerDependencies ?? {}), ...mainPackage.peers]);
+		const peerDepNames = new Set([
+			...Object.keys(manifest.peerDependencies ?? {}),
+			...mainPackage.peers.keys(),
+		]);
 		// resolution ignores packages listing themselves as peers
 		peerDepNames.delete(mainPackage.name);
 		const peerDependencies = [...peerDepNames];

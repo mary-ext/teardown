@@ -150,10 +150,10 @@ export interface ResolvedPackage {
 	/** resolved dependencies (name -> ResolvedPackage), including auto-installed peers */
 	dependencies: Map<string, ResolvedPackage>;
 	/**
-	 * peer names, including optional peers, excluding the package's own name and names declared as
-	 * regular or optional dependencies
+	 * peer ranges by name, including optional peers, excluding the package's own name and names
+	 * declared as regular or optional dependencies
 	 */
-	peers: Set<string>;
+	peers: Map<string, string>;
 }
 
 /**

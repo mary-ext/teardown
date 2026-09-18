@@ -47,7 +47,7 @@ describe('createPackageStore', () => {
 			version: '7.0.0',
 			tarball: 'https://registry.npmjs.org/is-number/-/is-number-7.0.0.tgz',
 			dependencies: new Map(),
-			peers: new Set(['is-odd']),
+			peers: new Map([['is-odd', '*']]),
 		};
 		const app: ResolvedPackage = {
 			name: 'is-even',
@@ -57,7 +57,7 @@ describe('createPackageStore', () => {
 				['is-odd', isOdd],
 				['is-number', lib],
 			]),
-			peers: new Set(),
+			peers: new Map(),
 		};
 
 		const volume = new Volume();
@@ -104,7 +104,7 @@ describe('createPackageStore', () => {
 				version: '0.0.0-missing',
 				tarball: 'https://registry.npmjs.org/is-odd/-/is-odd-0.0.0-missing.tgz',
 				dependencies: new Map(),
-				peers: new Set(),
+				peers: new Map(),
 			};
 
 			await expect(createPackageStore(new Volume()).link(isolate([missing]))).rejects.toThrow();

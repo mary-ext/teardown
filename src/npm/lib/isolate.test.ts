@@ -17,7 +17,7 @@ const pkg = (spec: string, deps: ResolvedPackage[] = [], peers: string[] = []): 
 		version,
 		tarball: `https://registry.npmjs.org/${name}/-/${name}-${version}.tgz`,
 		dependencies: new Map(deps.map((d) => [d.name, d])),
-		peers: new Set(peers),
+		peers: new Map(peers.map((peer) => [peer, '*'])),
 	};
 };
 
@@ -81,7 +81,52 @@ describe('isolate', () => {
 		it('falls back to the auto-installed peer', () => {
 			const result = isolate([pkg('lib', [pkg('react@19.0.0')], ['react'])]);
 
-			expect(describeLayout(result)).toEqual(['lib@1.0.0: react -> react@19.0.0', 'react@19.0.0: ']);
+			expect(describeLayout(result)).toEqual([
+				'lib@1.0.0(react@19.0.0): react -> react@19.0.0',
+				'react@19.0.0: ',
+			]);
+			// shared peers get no root link
+			expect([...result.roots]).toEqual([['lib', 'lib@1.0.0(react@19.0.0)']]);
+		});
+
+		it('shares one auto-installed peer between packages missing it', () => {
+			// b inherits react under a but needs a fallback under c
+			const react = pkg('react@19.0.0');
+			const b = pkg('b', [react], ['react']);
+			const result = isolate([pkg('a', [react, b], ['react']), pkg('c', [b])]);
+
+			expect(describeLayout(result)).toEqual([
+				'a@1.0.0(react@19.0.0): b -> b@1.0.0(react@19.0.0), react -> react@19.0.0',
+				'b@1.0.0(react@19.0.0): react -> react@19.0.0',
+				'c@1.0.0(react@19.0.0): b -> b@1.0.0(react@19.0.0)',
+				'react@19.0.0: ',
+			]);
+		});
+
+		it('shares the highest version satisfying every fallback range', () => {
+			const lib18 = pkg('lib18', [pkg('react@18.3.1')], []);
+			lib18.peers.set('react', '^18.0.0');
+			const libAny = pkg('lib-any', [pkg('react@19.0.0')], []);
+			libAny.peers.set('react', '>=16');
+			const result = isolate([pkg('app', [lib18, libAny])]);
+
+			expect(describeLayout(result).filter((line) => line.startsWith('react@'))).toEqual(['react@18.3.1: ']);
+		});
+
+		it('keeps separate fallbacks when no version satisfies every range', () => {
+			const lib18 = pkg('lib18', [pkg('react@18.3.1')], []);
+			lib18.peers.set('react', '^18.0.0');
+			const lib19 = pkg('lib19', [pkg('react@19.0.0')], []);
+			lib19.peers.set('react', '^19.0.0');
+			const result = isolate([pkg('app', [lib18, lib19])]);
+
+			expect(describeLayout(result)).toEqual([
+				'app@1.0.0: lib18 -> lib18@1.0.0, lib19 -> lib19@1.0.0',
+				'lib18@1.0.0: react -> react@18.3.1',
+				'lib19@1.0.0: react -> react@19.0.0',
+				'react@18.3.1: ',
+				'react@19.0.0: ',
+			]);
 		});
 
 		it('leaves missing optional peers unlinked', () => {

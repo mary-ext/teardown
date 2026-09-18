@@ -1,3 +1,5 @@
+import * as semver from 'semver';
+
 import type { IsolatedResult, ResolvedPackage, StoreEntry } from './types';
 
 /** a named dependency visible to a package. */
@@ -78,14 +80,14 @@ const findOpenPeers = (roots: ResolvedPackage[]): Map<ResolvedPackage, Set<strin
 	{
 		const stack = [...roots];
 		for (const pkg of roots) {
-			open.set(pkg, new Set(pkg.peers));
+			open.set(pkg, new Set(pkg.peers.keys()));
 		}
 
 		while (stack.length > 0) {
 			const pkg = stack.pop()!;
 			for (const [, dep] of getChildren(pkg)) {
 				if (!open.has(dep)) {
-					open.set(dep, new Set(dep.peers));
+					open.set(dep, new Set(dep.peers.keys()));
 					stack.push(dep);
 				}
 
@@ -126,6 +128,40 @@ const findOpenPeers = (roots: ResolvedPackage[]): Map<ResolvedPackage, Set<strin
 };
 
 /**
+ * shares the highest version satisfying all fallback ranges for a peer.
+ * peers with no common version keep per-package fallbacks.
+ */
+const selectPeerProviders = (packages: ResolvedPackage[]): Map<string, ResolvedPackage> => {
+	const versionsByName = Map.groupBy(packages, (pkg) => pkg.name);
+
+	// only required peers get fallbacks
+	const fallbackRanges = Map.groupBy(
+		packages.flatMap((pkg) => Array.from(pkg.peers).filter(([name]) => pkg.dependencies.has(name))),
+		([name]) => name,
+	);
+
+	const providers = new Map<string, ResolvedPackage>();
+	for (const [name, peers] of fallbackRanges) {
+		const ranges = [...new Set(peers.map(([, range]) => range))];
+
+		const best = (versionsByName.get(name) ?? [])
+			.filter((pkg) =>
+				ranges.every((range) =>
+					semver.satisfies(pkg.version, range, { loose: true, includePrerelease: true }),
+				),
+			)
+			.toSorted((a, b) => semver.rcompare(a.version, b.version, true))
+			.at(0);
+
+		if (best !== undefined) {
+			providers.set(name, best);
+		}
+	}
+
+	return providers;
+};
+
+/**
  * returns the base store id of a package.
  *
  * @param pkg the package
@@ -148,7 +184,8 @@ export const getEntryPath = (id: string, name: string): string => {
 
 /**
  * builds a pnpm-style layout with one entry per package and peer context.
- * peers use ancestor-provided versions, then auto-installed fallbacks; missing peers stay unlinked.
+ * peers prefer ancestor providers, then a shared version satisfying all fallback ranges,
+ * then per-package fallbacks. missing peers stay unlinked.
  *
  * entry ids include nested peer ids, e.g. `lib@1.0.0(react-dom@18.0.0(react@18.0.0))`,
  * truncated with a hash suffix beyond 120 characters.
@@ -210,7 +247,7 @@ export const isolate = (roots: ResolvedPackage[]): IsolatedResult => {
 		const instance: Instance = { pkg, id, links: layer };
 		instances.set(id, instance);
 
-		for (const name of pkg.peers) {
+		for (const name of pkg.peers.keys()) {
 			const provider = lookup(slot.scope, name);
 			if (provider !== undefined) {
 				layer.set(name, provider);
@@ -236,12 +273,25 @@ export const isolate = (roots: ResolvedPackage[]): IsolatedResult => {
 		return instance;
 	};
 
-	const rootScope: Scope = { layer: new Map(), owner: null, parent: null };
+	// roots override shared providers; shared providers get no root `/node_modules` links
+	const providerScope: Scope = { layer: new Map(), owner: null, parent: null };
+	const rootScope: Scope = { layer: new Map(), owner: null, parent: providerScope };
 	for (const pkg of roots) {
 		rootScope.layer.set(pkg.name, { pkg, scope: rootScope, id: undefined, entry: undefined });
 	}
+	for (const [name, pkg] of selectPeerProviders([...openPeers.keys()])) {
+		providerScope.layer.set(name, { pkg, scope: rootScope, id: undefined, entry: undefined });
+	}
+
 	for (const slot of rootScope.layer.values()) {
 		slot.entry = instantiate(slot);
+	}
+
+	// instantiate linked providers, including those added while iterating
+	for (const instance of instances.values()) {
+		for (const slot of instance.links.values()) {
+			slot.entry ??= instantiate(slot);
+		}
 	}
 
 	const entries = new Map<string, StoreEntry>();
