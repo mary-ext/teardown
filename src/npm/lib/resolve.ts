@@ -171,6 +171,14 @@ const parseManifest = (entry: PackumentVersion, name: string, version: string): 
 	return result.output;
 };
 
+const getBundledNames = (manifest: AbbreviatedManifest): Set<string> => {
+	const bundled = manifest.bundleDependencies ?? manifest.bundledDependencies;
+	if (bundled === true) {
+		return new Set(Object.keys(manifest.dependencies ?? {}));
+	}
+	return new Set(Array.isArray(bundled) ? bundled : []);
+};
+
 /**
  * options for dependency resolution.
  */
@@ -266,10 +274,19 @@ async function resolvePackage(
 	// dependencies of a peer fallback are needed only if the fallback is used
 	const depsToResolve: Array<[name: string, range: string, peer: boolean]> = [];
 
-	// add regular dependencies
 	const deps = manifest.dependencies ?? {};
-	for (const [depName, depRange] of Object.entries(deps)) {
-		depsToResolve.push([depName, depRange, peer]);
+	const optionalDeps = manifest.optionalDependencies ?? {};
+
+	// add regular dependencies
+	{
+		const bundled = getBundledNames(manifest);
+		for (const [depName, depRange] of Object.entries(deps)) {
+			// optional declarations override regular ones; bundled dependencies are already in the tarball
+			if (Object.hasOwn(optionalDeps, depName) || bundled.has(depName)) {
+				continue;
+			}
+			depsToResolve.push([depName, depRange, peer]);
+		}
 	}
 
 	// resolve required peers as fallbacks for peers not provided by ancestors
@@ -277,7 +294,7 @@ async function resolvePackage(
 		const peerMeta = manifest.peerDependenciesMeta ?? {};
 		for (const [peerName, peerRange] of Object.entries(manifest.peerDependencies)) {
 			// the package itself and declared dependencies take precedence
-			if (peerName === name || peerName in deps) {
+			if (peerName === name || Object.hasOwn(deps, peerName) || Object.hasOwn(optionalDeps, peerName)) {
 				continue;
 			}
 

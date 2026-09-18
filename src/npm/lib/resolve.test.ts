@@ -655,6 +655,24 @@ describe('resolve', () => {
 			expect(alias.version).toMatch(/^4\./);
 		});
 	});
+
+	describe('optional and bundled dependencies', () => {
+		it('skips optional dependencies also listed as regular ones', async () => {
+			// lists fsevents in both dependencies and optionalDependencies
+			const result = await resolve(['chokidar@2.1.8']);
+
+			expect(result.roots[0]!.dependencies.has('fsevents')).toBe(false);
+			expect([...result.packages.values()].some((pkg) => pkg.name === 'fsevents')).toBe(false);
+		});
+
+		it('skips bundled dependencies', async () => {
+			// bundles all of its dependencies
+			const result = await resolve(['npm@10.9.2']);
+
+			expect(result.roots[0]!.dependencies.size).toBe(0);
+			expect(result.packages.size).toBe(1);
+		});
+	});
 });
 
 // #endregion

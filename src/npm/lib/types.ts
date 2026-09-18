@@ -70,6 +70,14 @@ const distSchema = v.object({
 });
 
 /**
+ * bundled dependency names, or `true` for all dependencies. malformed values are ignored.
+ */
+const bundleDependenciesSchema = v.fallback(
+	v.optional(v.union([v.boolean(), v.array(v.string())])),
+	undefined,
+);
+
+/**
  * manifest fields used during dependency resolution.
  * @see https://github.com/npm/registry/blob/main/docs/responses/package-metadata.md#abbreviated-metadata-format
  */
@@ -79,9 +87,13 @@ export const abbreviatedManifestSchema = v.object({
 		'version',
 		'deprecated',
 		'dependencies',
+		'optionalDependencies',
 		'peerDependencies',
 		'peerDependenciesMeta',
 	]).entries,
+	bundleDependencies: bundleDependenciesSchema,
+	// legacy spelling
+	bundledDependencies: bundleDependenciesSchema,
 	dist: distSchema,
 });
 
@@ -129,7 +141,7 @@ export interface ResolvedPackage {
 	dependencies: Map<string, ResolvedPackage>;
 	/**
 	 * peer names, including optional peers, excluding the package's own name and names declared as
-	 * regular dependencies
+	 * regular or optional dependencies
 	 */
 	peers: Set<string>;
 }
