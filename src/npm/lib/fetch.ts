@@ -9,7 +9,7 @@ import { FetchError } from './errors';
 export interface FetchOptions {
 	/** max concurrent fetches, a positive integer (default 16) */
 	concurrency?: number;
-	/** regex patterns for files to exclude (matched against path after "package/" prefix is stripped) */
+	/** regex patterns for files to exclude (matched against path after the root folder is stripped) */
 	exclude?: RegExp[];
 }
 
@@ -82,8 +82,29 @@ export interface TarballOptions {
 }
 
 /**
- * fetches a tarball and writes its contents directly to a volume.
- * handles gzip decompression and strips the "package/" prefix from paths.
+ * maps a tarball entry to a path within the package.
+ * npm packs files under `package/`, but some older tarballs use another root folder, like `node/`.
+ * @returns the relative path, or null for empty, absolute, or parent-traversing paths
+ */
+const toPackagePath = (name: string): string | null => {
+	if (name.startsWith('/')) {
+		return null;
+	}
+
+	const segments = name.split(/[/\\]/).filter((segment) => segment !== '' && segment !== '.');
+	if (segments.includes('..')) {
+		return null;
+	}
+
+	// single-segment entries have no root folder
+	if (segments.length > 1) {
+		segments.shift();
+	}
+	return segments.length > 0 ? segments.join('/') : null;
+};
+
+/**
+ * extracts a gzipped tarball into a volume, stripping its root folder and skipping unsafe paths.
  *
  * @param volume the volume to write to
  * @param options the tarball and where to extract it
@@ -115,14 +136,13 @@ export async function fetchTarballToVolume(
 			continue;
 		}
 
+		const path = toPackagePath(entry.name);
+		if (path === null) {
+			continue;
+		}
+
 		// count size from tar header for all files (including excluded ones)
 		totalSize += entry.size;
-
-		// npm tarballs have files under "package/" prefix - strip it
-		let path = entry.name;
-		if (path.startsWith('package/')) {
-			path = path.slice(8);
-		}
 
 		// check if file should be excluded (skip extraction but size already counted)
 		if (exclude.some((pattern) => pattern.test(path))) {

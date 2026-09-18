@@ -1,5 +1,7 @@
+import { concat } from '@atcute/uint8array';
+import { writeTarEntry } from '@mary/tar';
 import { Volume } from 'memfs';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { DEFAULT_EXCLUDE_PATTERNS, fetchTarballToVolume, type TarballOptions } from './fetch';
 
@@ -16,17 +18,63 @@ const extract = (volume: Volume, url: string, options: Partial<TarballOptions> =
 	});
 };
 
+const makeTarball = async (files: Array<[name: string, data: string]>): Promise<Uint8Array<ArrayBuffer>> => {
+	const entries = files.map(([filename, data]) => writeTarEntry({ filename, data }));
+	const tar = concat([...entries, new Uint8Array(1024)]);
+	const gzipped = new Response(tar).body!.pipeThrough(new CompressionStream('gzip'));
+	return new Uint8Array(await new Response(gzipped).arrayBuffer());
+};
+
+/** serves each response in turn, repeating the last */
+const serve = (...responses: Array<() => Response>) => {
+	const fetch = vi.fn(async () => responses[Math.min(fetch.mock.calls.length - 1, responses.length - 1)]!());
+	vi.stubGlobal('fetch', fetch);
+	return fetch;
+};
+
 // #endregion
 
 // #region fetchTarballToVolume
 
 describe('fetchTarballToVolume', () => {
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
 	it('extracts the package without its "package/" prefix', async () => {
 		const volume = new Volume();
 		await extract(volume, IS_ODD_TARBALL);
 
 		expect(volume.existsSync('/pkg/package.json')).toBe(true);
 		expect(volume.existsSync('/pkg/index.js')).toBe(true);
+	});
+
+	it('strips root folders other than "package/"', async () => {
+		const tarball = await makeTarball([
+			['node/package.json', '{}'],
+			['node/lib/index.js', ''],
+		]);
+		serve(() => new Response(tarball));
+
+		const volume = new Volume();
+		await extract(volume, 'https://example.com/a.tgz');
+
+		expect(Object.keys(volume.toJSON()).toSorted()).toEqual(['/pkg/lib/index.js', '/pkg/package.json']);
+	});
+
+	it('skips entries escaping the package', async () => {
+		const tarball = await makeTarball([
+			['package/index.js', 'ok'],
+			['package/../../evil.js', 'nope'],
+			['/abs.js', 'nope'],
+		]);
+		serve(() => new Response(tarball));
+
+		const volume = new Volume();
+		const size = await extract(volume, 'https://example.com/a.tgz');
+
+		expect(Object.keys(volume.toJSON())).toEqual(['/pkg/index.js']);
+		expect(size).toBe(2);
 	});
 
 	it('skips excluded files but counts them towards the size', async () => {
