@@ -54,18 +54,33 @@ export const createPackageStore = (volume: Volume, options: PackageStoreOptions 
 	const fetches = new Map<string, Promise<void>>();
 
 	let active = 0;
-	const waiting: Array<() => void> = [];
-	const acquire = async (): Promise<void> => {
+	// ascending by size for largest-first pop()
+	const waiting: Array<{ size: number; resolve: () => void }> = [];
+	const acquire = async (size: number): Promise<void> => {
 		if (active < concurrency) {
 			active++;
 			return;
 		}
-		await new Promise<void>((resolve) => waiting.push(resolve));
+
+		// insert before equal sizes to preserve arrival order when popping
+		let low = 0;
+		let high = waiting.length;
+		while (low < high) {
+			const mid = (low + high) >>> 1;
+			if (waiting[mid]!.size < size) {
+				low = mid + 1;
+			} else {
+				high = mid;
+			}
+		}
+
+		await new Promise<void>((resolve) => waiting.splice(low, 0, { size, resolve }));
 	};
 	const release = (): void => {
-		const next = waiting.shift();
+		// start larger downloads first to reduce the wait for the last tarball
+		const next = waiting.pop();
 		if (next !== undefined) {
-			next();
+			next.resolve();
 		} else {
 			active--;
 		}
@@ -77,7 +92,7 @@ export const createPackageStore = (volume: Volume, options: PackageStoreOptions 
 		let promise = fetches.get(id);
 		if (promise === undefined) {
 			promise = (async () => {
-				await acquire();
+				await acquire(pkg.unpackedSize ?? 0);
 				try {
 					const size = await fetchTarballToVolume(volume, {
 						url: pkg.tarball,
