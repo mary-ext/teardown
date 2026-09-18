@@ -79,7 +79,11 @@ export const createPackageStore = (volume: Volume, options: PackageStoreOptions 
 			promise = (async () => {
 				await acquire();
 				try {
-					const size = await fetchTarballToVolume(pkg.tarball, getEntryPath(id, pkg.name), volume, exclude);
+					const size = await fetchTarballToVolume(volume, {
+						url: pkg.tarball,
+						destPath: getEntryPath(id, pkg.name),
+						exclude,
+					});
 					// JSR packages don't report their unpacked size
 					pkg.unpackedSize ??= size;
 				} finally {

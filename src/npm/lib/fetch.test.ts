@@ -1,16 +1,29 @@
 import { Volume } from 'memfs';
 import { describe, expect, it } from 'vitest';
 
-import { DEFAULT_EXCLUDE_PATTERNS, fetchTarballToVolume } from './fetch';
+import { DEFAULT_EXCLUDE_PATTERNS, fetchTarballToVolume, type TarballOptions } from './fetch';
 
 const IS_ODD_TARBALL = 'https://registry.npmjs.org/is-odd/-/is-odd-3.0.1.tgz';
+
+// #region test helpers
+
+const extract = (volume: Volume, url: string, options: Partial<TarballOptions> = {}): Promise<number> => {
+	return fetchTarballToVolume(volume, {
+		url,
+		destPath: '/pkg',
+		exclude: [],
+		...options,
+	});
+};
+
+// #endregion
 
 // #region fetchTarballToVolume
 
 describe('fetchTarballToVolume', () => {
 	it('extracts the package without its "package/" prefix', async () => {
 		const volume = new Volume();
-		await fetchTarballToVolume(IS_ODD_TARBALL, '/pkg', volume, []);
+		await extract(volume, IS_ODD_TARBALL);
 
 		expect(volume.existsSync('/pkg/package.json')).toBe(true);
 		expect(volume.existsSync('/pkg/index.js')).toBe(true);
@@ -18,15 +31,10 @@ describe('fetchTarballToVolume', () => {
 
 	it('skips excluded files but counts them towards the size', async () => {
 		const all = new Volume();
-		const allSize = await fetchTarballToVolume(IS_ODD_TARBALL, '/pkg', all, []);
+		const allSize = await extract(all, IS_ODD_TARBALL);
 
 		const filtered = new Volume();
-		const filteredSize = await fetchTarballToVolume(
-			IS_ODD_TARBALL,
-			'/pkg',
-			filtered,
-			DEFAULT_EXCLUDE_PATTERNS,
-		);
+		const filteredSize = await extract(filtered, IS_ODD_TARBALL, { exclude: DEFAULT_EXCLUDE_PATTERNS });
 
 		expect(all.existsSync('/pkg/README.md')).toBe(true);
 		expect(all.existsSync('/pkg/LICENSE')).toBe(true);
@@ -44,12 +52,7 @@ describe('fetchTarballToVolume', () => {
 
 	it('rejects when the tarball is missing', async () => {
 		await expect(
-			fetchTarballToVolume(
-				'https://registry.npmjs.org/is-odd/-/is-odd-0.0.0-missing.tgz',
-				'/pkg',
-				new Volume(),
-				[],
-			),
+			extract(new Volume(), 'https://registry.npmjs.org/is-odd/-/is-odd-0.0.0-missing.tgz'),
 		).rejects.toThrow();
 	});
 });

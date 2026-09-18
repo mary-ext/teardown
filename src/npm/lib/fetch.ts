@@ -70,21 +70,29 @@ export const DEFAULT_EXCLUDE_PATTERNS: RegExp[] = [
 ];
 
 /**
+ * where and how to extract a tarball.
+ */
+export interface TarballOptions {
+	/** the tarball URL */
+	url: string;
+	/** the destination path in the volume (e.g., "/node_modules/react") */
+	destPath: string;
+	/** regex patterns for files to skip */
+	exclude: RegExp[];
+}
+
+/**
  * fetches a tarball and writes its contents directly to a volume.
  * handles gzip decompression and strips the "package/" prefix from paths.
  *
- * @param url the tarball URL
- * @param destPath the destination path in the volume (e.g., "/node_modules/react")
  * @param volume the volume to write to
- * @param exclude regex patterns for files to skip
+ * @param options the tarball and where to extract it
  * @returns total file size in bytes, including excluded files
  * @throws {FetchError} if the tarball can't be fetched
  */
 export async function fetchTarballToVolume(
-	url: string,
-	destPath: string,
 	volume: Volume,
-	exclude: RegExp[],
+	{ url, destPath, exclude }: TarballOptions,
 ): Promise<number> {
 	const response = await fetch(url);
 	if (!response.ok) {
