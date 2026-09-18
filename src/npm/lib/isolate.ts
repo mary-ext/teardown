@@ -188,7 +188,7 @@ export const getEntryPath = (id: string, name: string): string => {
  * then per-package fallbacks. missing peers stay unlinked.
  *
  * entry ids include nested peer ids, e.g. `lib@1.0.0(react-dom@18.0.0(react@18.0.0))`,
- * truncated with a hash suffix beyond 120 characters.
+ * truncated with a hash suffix beyond 120 characters at every level.
  *
  * @param roots the root packages from resolution
  * @returns the isolated layout
@@ -224,6 +224,9 @@ export const isolate = (roots: ResolvedPackage[]): IsolatedResult => {
 
 		resolving.delete(slot);
 
+		// bound id length even for deeply nested peers
+		id = toDirName(id);
+
 		// cycle-truncated ids depend on the traversal root and cannot be cached
 		if (complete) {
 			slot.id = id;
@@ -233,7 +236,7 @@ export const isolate = (roots: ResolvedPackage[]): IsolatedResult => {
 
 	const instantiate = (slot: Slot): Instance => {
 		const { pkg } = slot;
-		const id = toDirName(getId(slot).id);
+		const { id } = getId(slot);
 
 		// registered before descending, so dependency cycles link back to it
 		{
