@@ -77,6 +77,18 @@ describe('fetchTarballToVolume', () => {
 		expect(size).toBe(2);
 	});
 
+	it('counts duplicate entries once, keeping the last', async () => {
+		const tarball = await makeTarball([
+			['package/a.js', 'first'],
+			['package/a.js', 'second'],
+		]);
+		serve(() => new Response(tarball));
+
+		const volume = new Volume();
+		expect(await extract(volume, 'https://example.com/a.tgz')).toBe(6);
+		expect(volume.readFileSync('/pkg/a.js', 'utf8')).toBe('second');
+	});
+
 	it('skips excluded files but counts them towards the size', async () => {
 		const all = new Volume();
 		const allSize = await extract(all, IS_ODD_TARBALL);

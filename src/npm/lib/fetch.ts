@@ -108,7 +108,7 @@ const toPackagePath = (name: string): string | null => {
  *
  * @param volume the volume to write to
  * @param options the tarball and where to extract it
- * @returns total file size in bytes, including excluded files
+ * @returns total file size in bytes, including excluded files; duplicate paths count the last entry
  * @throws {FetchError} if the tarball can't be fetched
  */
 export async function fetchTarballToVolume(
@@ -128,7 +128,8 @@ export async function fetchTarballToVolume(
 	// decompress gzip -> extract tar
 	const decompressed = body.pipeThrough(new DecompressionStream('gzip'));
 
-	let totalSize = 0;
+	// duplicate paths count only the last entry's size
+	const sizes = new Map<string, number>();
 
 	for await (const entry of untar(decompressed)) {
 		// skip directories
@@ -142,7 +143,7 @@ export async function fetchTarballToVolume(
 		}
 
 		// count size from tar header for all files (including excluded ones)
-		totalSize += entry.size;
+		sizes.set(path, entry.size);
 
 		// check if file should be excluded (skip extraction but size already counted)
 		if (exclude.some((pattern) => pattern.test(path))) {
@@ -159,5 +160,9 @@ export async function fetchTarballToVolume(
 		volume.writeFileSync(fullPath, content);
 	}
 
+	let totalSize = 0;
+	for (const size of sizes.values()) {
+		totalSize += size;
+	}
 	return totalSize;
 }
