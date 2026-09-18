@@ -81,6 +81,7 @@ export const createPackageStore = (volume: Volume, options: PackageStoreOptions 
 				try {
 					const size = await fetchTarballToVolume(volume, {
 						url: pkg.tarball,
+						integrity: pkg.integrity,
 						destPath: getEntryPath(id, pkg.name),
 						exclude,
 					});

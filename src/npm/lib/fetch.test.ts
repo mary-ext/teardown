@@ -3,6 +3,7 @@ import { writeTarEntry } from '@mary/tar';
 import { Volume } from 'memfs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { IntegrityError } from './errors';
 import { DEFAULT_EXCLUDE_PATTERNS, fetchTarballToVolume, type TarballOptions } from './fetch';
 
 const IS_ODD_TARBALL = 'https://registry.npmjs.org/is-odd/-/is-odd-3.0.1.tgz';
@@ -12,6 +13,7 @@ const IS_ODD_TARBALL = 'https://registry.npmjs.org/is-odd/-/is-odd-3.0.1.tgz';
 const extract = (volume: Volume, url: string, options: Partial<TarballOptions> = {}): Promise<number> => {
 	return fetchTarballToVolume(volume, {
 		url,
+		integrity: undefined,
 		destPath: '/pkg',
 		exclude: [],
 		...options,
@@ -23,6 +25,11 @@ const makeTarball = async (files: Array<[name: string, data: string]>): Promise<
 	const tar = concat([...entries, new Uint8Array(1024)]);
 	const gzipped = new Response(tar).body!.pipeThrough(new CompressionStream('gzip'));
 	return new Uint8Array(await new Response(gzipped).arrayBuffer());
+};
+
+const sha512 = async (data: Uint8Array<ArrayBuffer>): Promise<string> => {
+	const digest = new Uint8Array(await crypto.subtle.digest('SHA-512', data));
+	return `sha512-${btoa(String.fromCharCode(...digest))}`;
 };
 
 /** serves each response in turn, repeating the last */
@@ -87,6 +94,25 @@ describe('fetchTarballToVolume', () => {
 		const volume = new Volume();
 		expect(await extract(volume, 'https://example.com/a.tgz')).toBe(6);
 		expect(volume.readFileSync('/pkg/a.js', 'utf8')).toBe('second');
+	});
+
+	it('verifies the tarball against its integrity', async () => {
+		const tarball = await makeTarball([['package/index.js', '']]);
+		serve(() => new Response(tarball));
+
+		await expect(
+			extract(new Volume(), 'https://example.com/a.tgz', { integrity: await sha512(tarball) }),
+		).resolves.toBe(0);
+	});
+
+	it('rejects a tarball not matching its integrity', async () => {
+		const tarball = await makeTarball([['package/index.js', '']]);
+		serve(() => new Response(tarball));
+
+		const other = await sha512(await makeTarball([['package/other.js', '']]));
+		await expect(extract(new Volume(), 'https://example.com/a.tgz', { integrity: other })).rejects.toThrow(
+			IntegrityError,
+		);
 	});
 
 	it('skips excluded files but counts them towards the size', async () => {

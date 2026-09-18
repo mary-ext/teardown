@@ -84,6 +84,19 @@ export class FetchError extends TeardownError {
 }
 
 /**
+ * thrown when downloaded content doesn't match its expected integrity hash.
+ */
+export class IntegrityError extends TeardownError {
+	readonly url: string;
+
+	constructor(url: string) {
+		super(`integrity mismatch for ${url}`);
+		this.name = 'IntegrityError';
+		this.url = url;
+	}
+}
+
+/**
  * thrown when bundling fails.
  */
 export class BundleError extends TeardownError {
