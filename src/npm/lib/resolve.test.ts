@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { reverseJsrName, transformJsrName } from './jsr-name';
-import { parseSpecifier, pickVersion, resolve } from './resolve';
+import { parseDependency, parseSpecifier, pickVersion, resolve } from './resolve';
 import type { PackumentVersion } from './types';
 
 // #region test helpers
@@ -124,6 +124,82 @@ describe('parseSpecifier', () => {
 		it('throws for unscoped jsr package', () => {
 			expect(() => parseSpecifier('jsr:flag')).toThrow('JSR packages must be scoped');
 		});
+	});
+});
+
+// #endregion
+
+// #region parseDependency
+
+describe('parseDependency', () => {
+	it('passes plain ranges and dist-tags through', () => {
+		expect(parseDependency('react', '^18.0.0', 'npm')).toEqual({
+			name: 'react',
+			range: '^18.0.0',
+			registry: 'npm',
+		});
+		expect(parseDependency('react', 'next', 'npm')).toEqual({
+			name: 'react',
+			range: 'next',
+			registry: 'npm',
+		});
+	});
+
+	it('fetches npm aliases under their real name', () => {
+		expect(parseDependency('string-width-cjs', 'npm:string-width@^4.2.0', 'npm')).toEqual({
+			name: 'string-width',
+			range: '^4.2.0',
+			registry: 'npm',
+		});
+		expect(parseDependency('types', 'npm:@types/node@20', 'npm')).toEqual({
+			name: '@types/node',
+			range: '20',
+			registry: 'npm',
+		});
+		expect(parseDependency('x', 'npm:@scope/pkg', 'npm')).toEqual({
+			name: '@scope/pkg',
+			range: 'latest',
+			registry: 'npm',
+		});
+	});
+
+	it('fetches jsr specifiers from JSR', () => {
+		expect(parseDependency('@std/path', 'jsr:^1.0.0', 'npm')).toEqual({
+			name: '@std/path',
+			range: '^1.0.0',
+			registry: 'jsr',
+		});
+		expect(parseDependency('path', 'jsr:@std/path@^1.0.0', 'npm')).toEqual({
+			name: '@std/path',
+			range: '^1.0.0',
+			registry: 'jsr',
+		});
+		expect(parseDependency('flag', 'npm:@jsr/luca__flag@1', 'npm')).toEqual({
+			name: '@luca/flag',
+			range: '1',
+			registry: 'jsr',
+		});
+	});
+
+	it("maps JSR packages' own @jsr/* dependencies back to JSR", () => {
+		expect(parseDependency('@jsr/std__internal', '^1.0.0', 'jsr')).toEqual({
+			name: '@std/internal',
+			range: '^1.0.0',
+			registry: 'jsr',
+		});
+		expect(parseDependency('@jsr/std__internal', '^1.0.0', 'npm').registry).toBe('npm');
+	});
+
+	it('rejects non-registry specifiers', () => {
+		for (const range of [
+			'git+https://github.com/a/b.git',
+			'github:a/b',
+			'a/b#main',
+			'file:../b',
+			'https://example.com/b.tgz',
+		]) {
+			expect(() => parseDependency('b', range, 'npm')).toThrow('only registry dependencies are supported');
+		}
 	});
 });
 
@@ -540,6 +616,17 @@ describe('resolve', () => {
 			await resolve([name, `${name}@1.0.0`]);
 
 			expect(fetch).toHaveBeenCalledTimes(1);
+		});
+	});
+
+	describe('dependency specifiers', () => {
+		it('resolves npm aliases, linked under the alias', async () => {
+			// declares "string-width-cjs": "npm:string-width@^4.2.0"
+			const result = await resolve(['@isaacs/cliui@8.0.2'], { installPeers: false });
+			const alias = result.roots[0]!.dependencies.get('string-width-cjs')!;
+
+			expect(alias.name).toBe('string-width');
+			expect(alias.version).toMatch(/^4\./);
 		});
 	});
 });

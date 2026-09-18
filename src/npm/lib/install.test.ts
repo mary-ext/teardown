@@ -77,4 +77,13 @@ describe('install', () => {
 		expect(stored).toContain('use-sync-external-store@1.2.0(react@17.0.2)');
 		expect([...layout.entries.keys()].filter((id) => id.startsWith('react@'))).toEqual(['react@17.0.2']);
 	});
+
+	it('installs packages depending on npm aliases', async () => {
+		// @isaacs/cliui declares "string-width-cjs": "npm:string-width@^4.2.0"
+		const volume = new Volume();
+		await install(['@isaacs/cliui@8.0.2'], volume);
+
+		const entry = '/node_modules/.pnpm/@isaacs+cliui@8.0.2/node_modules';
+		expect(readJson(volume, `${entry}/string-width-cjs/package.json`).name).toBe('string-width');
+	});
 });

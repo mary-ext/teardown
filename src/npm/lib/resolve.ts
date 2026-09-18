@@ -42,6 +42,56 @@ export function parseSpecifier(spec: string): PackageSpecifier {
 	return parsed;
 }
 
+const splitNameAndRange = (spec: string): { name: string; range: string } => {
+	const at = spec.indexOf('@', 1);
+	if (at === -1) {
+		return { name: spec, range: 'latest' };
+	}
+	return { name: spec.slice(0, at), range: spec.slice(at + 1) || 'latest' };
+};
+
+/**
+ * resolves a manifest dependency's name, range, and registry.
+ * accepts ranges, dist-tags, `npm:` aliases, `jsr:` specifiers, and JSR's `@jsr/*` names.
+ *
+ * @param name the dependency's declared import name
+ * @param range the declared range or specifier
+ * @param parentRegistry the registry of the declaring package
+ * @returns the canonical package name, range, and registry to fetch
+ * @throws {InvalidSpecifierError} for Git, URL, or file dependencies
+ */
+export function parseDependency(name: string, range: string, parentRegistry: Registry): PackageSpecifier {
+	if (range.startsWith('npm:')) {
+		const target = splitNameAndRange(range.slice(4));
+		// JSR's npm compatibility names only exist on JSR's registry
+		if (target.name.startsWith('@jsr/')) {
+			return { name: reverseJsrName(target.name), range: target.range, registry: 'jsr' };
+		}
+		return { ...target, registry: 'npm' };
+	}
+
+	if (range.startsWith('jsr:')) {
+		const rest = range.slice(4);
+		// either `jsr:@scope/name@range` or `jsr:range` for the declared name
+		if (rest.startsWith('@')) {
+			return { ...splitNameAndRange(rest), registry: 'jsr' };
+		}
+		return { name, range: rest || 'latest', registry: 'jsr' };
+	}
+
+	// semver ranges and dist-tags never contain these, but URLs, paths and git shorthands do
+	if (range.includes(':') || range.includes('/')) {
+		throw new InvalidSpecifierError(`${name}@${range}`, `only registry dependencies are supported`);
+	}
+
+	// only JSR manifests use bare `@jsr/*` names for JSR dependencies
+	if (parentRegistry === 'jsr' && name.startsWith('@jsr/')) {
+		return { name: reverseJsrName(name), range, registry: 'jsr' };
+	}
+
+	return { name, range, registry: 'npm' };
+}
+
 /**
  * selects the preferred version that satisfies a range.
  * @param versions versions by version string
@@ -242,18 +292,8 @@ async function resolvePackage(
 	// resolve all dependencies in parallel
 	const resolvedDeps = await Promise.all(
 		depsToResolve.map(async ([depName, depRange, depPeer]) => {
-			// when a JSR package depends on @jsr/*, reverse to canonical name and fetch from JSR
-			// otherwise use npm (even for @jsr/* from npm packages - that's what the author intended)
-			let resolvedName = depName;
-			let depRegistry: Registry = 'npm';
-			if (registry === 'jsr' && depName.startsWith('@jsr/')) {
-				resolvedName = reverseJsrName(depName);
-				depRegistry = 'jsr';
-			}
-			const dep = await resolvePackage(
-				{ name: resolvedName, range: depRange, registry: depRegistry, peer: depPeer },
-				ctx,
-			);
+			const target = parseDependency(depName, depRange, registry);
+			const dep = await resolvePackage({ ...target, peer: depPeer }, ctx);
 			return [depName, dep] as const;
 		}),
 	);
