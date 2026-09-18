@@ -295,14 +295,39 @@ export const isolate = (roots: ResolvedPackage[]): IsolatedResult => {
 	}
 
 	const entries = new Map<string, StoreEntry>();
-	const hoisted = new Map<string, string>();
 	for (const [id, instance] of instances) {
 		entries.set(id, { id, pkg: instance.pkg, links: toIds(instance.links) });
-
-		if (!hoisted.has(instance.pkg.name)) {
-			hoisted.set(instance.pkg.name, id);
-		}
 	}
 
-	return { entries, roots: toIds(rootScope.layer), hoisted };
+	const rootIds = toIds(rootScope.layer);
+	return { entries, roots: rootIds, hoisted: hoist(rootIds, entries) };
+};
+
+/**
+ * picks the shallowest entry per name for undeclared imports, breaking ties by id.
+ */
+const hoist = (roots: Map<string, string>, entries: Map<string, StoreEntry>): Map<string, string> => {
+	const hoisted = new Map<string, string>();
+	const visited = new Set(roots.values());
+
+	let level = [...visited];
+	while (level.length > 0) {
+		const next: string[] = [];
+		for (const id of level.toSorted()) {
+			const entry = entries.get(id)!;
+			if (!hoisted.has(entry.pkg.name)) {
+				hoisted.set(entry.pkg.name, id);
+			}
+
+			for (const target of entry.links.values()) {
+				if (!visited.has(target)) {
+					visited.add(target);
+					next.push(target);
+				}
+			}
+		}
+		level = next;
+	}
+
+	return hoisted;
 };

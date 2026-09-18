@@ -286,4 +286,10 @@ describe('isolate', () => {
 
 		expect([...result.hoisted.keys()].toSorted()).toEqual(['a', 'b', 'c']);
 	});
+
+	it('hoists the shallowest version of each package', () => {
+		const result = isolate([pkg('lib', [pkg('dep', [pkg('react@17.0.0')])]), pkg('react@18.0.0')]);
+
+		expect(result.hoisted.get('react')).toBe('react@18.0.0');
+	});
 });
