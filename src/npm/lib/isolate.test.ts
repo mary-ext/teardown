@@ -14,6 +14,7 @@ const pkg = (spec: string, deps: ResolvedPackage[] = [], peers: string[] = []): 
 
 	return {
 		name,
+		registry: 'npm',
 		version,
 		tarball: `https://registry.npmjs.org/${name}/-/${name}-${version}.tgz`,
 		dependencies: new Map(deps.map((d) => [d.name, d])),
@@ -291,5 +292,15 @@ describe('isolate', () => {
 		const result = isolate([pkg('lib', [pkg('dep', [pkg('react@17.0.0')])]), pkg('react@18.0.0')]);
 
 		expect(result.hoisted.get('react')).toBe('react@18.0.0');
+	});
+
+	it('keeps JSR packages apart from same-named npm packages', () => {
+		const jsr: ResolvedPackage = { ...pkg('@luca/flag'), registry: 'jsr' };
+		const result = isolate([pkg('app', [pkg('@luca/flag'), pkg('other', [jsr])])]);
+
+		expect([...result.entries.keys()].filter((id) => id.includes('flag')).toSorted()).toEqual([
+			'@jsr+luca__flag@1.0.0',
+			'@luca+flag@1.0.0',
+		]);
 	});
 });

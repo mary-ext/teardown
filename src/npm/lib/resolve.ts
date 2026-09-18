@@ -280,6 +280,7 @@ async function resolvePackage(
 
 	const resolved: ResolvedPackage = {
 		name,
+		registry,
 		version: manifest.version,
 		tarball: manifest.dist.tarball,
 		integrity: manifest.dist.integrity,

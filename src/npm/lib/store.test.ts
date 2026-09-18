@@ -44,6 +44,7 @@ describe('createPackageStore', () => {
 		const isOdd = await resolveRoot('is-odd@3.0.1');
 		const lib: ResolvedPackage = {
 			name: 'is-number',
+			registry: 'npm',
 			version: '7.0.0',
 			tarball: 'https://registry.npmjs.org/is-number/-/is-number-7.0.0.tgz',
 			dependencies: new Map(),
@@ -51,6 +52,7 @@ describe('createPackageStore', () => {
 		};
 		const app: ResolvedPackage = {
 			name: 'is-even',
+			registry: 'npm',
 			version: '1.0.0',
 			tarball: 'https://registry.npmjs.org/is-even/-/is-even-1.0.0.tgz',
 			dependencies: new Map([
@@ -101,6 +103,7 @@ describe('createPackageStore', () => {
 		it('rejects when a package fails to fetch', async () => {
 			const missing: ResolvedPackage = {
 				name: 'is-odd',
+				registry: 'npm',
 				version: '0.0.0-missing',
 				tarball: 'https://registry.npmjs.org/is-odd/-/is-odd-0.0.0-missing.tgz',
 				dependencies: new Map(),

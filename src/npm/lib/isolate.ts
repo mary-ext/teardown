@@ -1,5 +1,6 @@
 import * as semver from 'semver';
 
+import { transformJsrName } from './jsr-name';
 import type { IsolatedResult, ResolvedPackage, StoreEntry } from './types';
 
 /** a named dependency visible to a package. */
@@ -145,10 +146,12 @@ const selectPeerProviders = (packages: ResolvedPackage[]): Map<string, ResolvedP
 		const ranges = [...new Set(peers.map(([, range]) => range))];
 
 		const best = (versionsByName.get(name) ?? [])
-			.filter((pkg) =>
-				ranges.every((range) =>
-					semver.satisfies(pkg.version, range, { loose: true, includePrerelease: true }),
-				),
+			.filter(
+				(pkg) =>
+					pkg.registry === 'npm' &&
+					ranges.every((range) =>
+						semver.satisfies(pkg.version, range, { loose: true, includePrerelease: true }),
+					),
 			)
 			.toSorted((a, b) => semver.rcompare(a.version, b.version, true))
 			.at(0);
@@ -165,10 +168,11 @@ const selectPeerProviders = (packages: ResolvedPackage[]): Map<string, ResolvedP
  * returns the base store id of a package.
  *
  * @param pkg the package
- * @returns `name@version` with `/` replaced by `+` for a single path segment
+ * @returns `name@version` with `/` replaced by `+`; JSR names use `@jsr+scope__name`
  */
 export const getBaseId = (pkg: ResolvedPackage): string => {
-	return `${pkg.name.replace('/', '+')}@${pkg.version}`;
+	const name = pkg.registry === 'jsr' ? transformJsrName(pkg.name) : pkg.name;
+	return `${name.replace('/', '+')}@${pkg.version}`;
 };
 
 /**

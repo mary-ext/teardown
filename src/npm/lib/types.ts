@@ -139,7 +139,10 @@ export type AbbreviatedPackument = v.InferOutput<typeof abbreviatedPackumentSche
  * a resolved package before layout.
  */
 export interface ResolvedPackage {
+	/** canonical name, e.g. `@luca/flag` for JSR packages */
 	name: string;
+	/** source registry */
+	registry: Registry;
 	version: string;
 	/** the tarball URL for fetching */
 	tarball: string;

@@ -13,6 +13,7 @@ const pkg = (spec: string, deps: ResolvedPackage[] = [], peers: string[] = []): 
 	const [name, version = '1.0.0'] = spec.split('@');
 	return {
 		name: name!,
+		registry: 'npm',
 		version,
 		tarball: `https://registry.npmjs.org/${name}/-/${name}-${version}.tgz`,
 		unpackedSize: 100,
