@@ -3,6 +3,7 @@ import { untar } from '@mary/tar';
 import type { Volume } from 'memfs';
 
 import { FetchError, IntegrityError } from './errors';
+import { retry } from './retry';
 
 /**
  * options for fetching packages.
@@ -152,20 +153,7 @@ const toPackagePath = (name: string): string | null => {
 	return segments.length > 0 ? segments.join('/') : null;
 };
 
-/**
- * extracts a gzipped tarball into a volume, stripping its root folder and skipping unsafe paths.
- * failed extraction or integrity checks may leave files in the volume.
- *
- * @param volume the volume to write to
- * @param options the tarball and where to extract it
- * @returns total file size in bytes, including excluded files; duplicate paths count the last entry
- * @throws {FetchError} if the tarball can't be fetched
- * @throws {IntegrityError} if the tarball doesn't match `options.integrity`
- */
-export const fetchTarballToVolume = async (
-	volume: Volume,
-	{ url, integrity, destPath, exclude }: TarballOptions,
-): Promise<number> => {
+const extractTarball = async (volume: Volume, { url, integrity, destPath, exclude }: TarballOptions) => {
 	const response = await fetch(url);
 	if (!response.ok) {
 		throw new FetchError(url, response.status, response.statusText);
@@ -238,4 +226,19 @@ export const fetchTarballToVolume = async (
 		totalSize += size;
 	}
 	return totalSize;
+};
+
+/**
+ * extracts a gzipped tarball into a volume, stripping its root folder and skipping unsafe paths.
+ * retries transient failures. failed extraction or integrity checks may leave files in the volume.
+ *
+ * @param volume the volume to write to
+ * @param options the tarball and where to extract it
+ * @returns total file size in bytes, including excluded files; duplicate paths count the last entry
+ * @throws {FetchError} if the tarball can't be fetched
+ * @throws {IntegrityError} if the tarball doesn't match `options.integrity`
+ */
+export const fetchTarballToVolume = (volume: Volume, options: TarballOptions): Promise<number> => {
+	// retries overwrite files left by earlier attempts
+	return retry(() => extractTarball(volume, options));
 };

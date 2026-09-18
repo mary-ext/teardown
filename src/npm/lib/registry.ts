@@ -4,6 +4,7 @@ import type { Registry } from '../../lib/package-name';
 
 import { FetchError, PackageNotFoundError } from './errors';
 import { transformJsrName } from './jsr-name';
+import { retry } from './retry';
 import { abbreviatedPackumentSchema, type AbbreviatedPackument } from './types';
 
 const NPM_REGISTRY = 'https://registry.npmjs.org';
@@ -56,20 +57,23 @@ async function loadPackument(name: string, registry: Registry): Promise<Abbrevia
 
 	const url = `${registryUrl}/${encodedName}`;
 
-	const response = await fetch(url, {
-		headers: {
-			// request abbreviated format (corgi) for smaller payloads
-			Accept: 'application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8',
-		},
+	const json: unknown = await retry(async () => {
+		const response = await fetch(url, {
+			headers: {
+				// request abbreviated format (corgi) for smaller payloads
+				Accept: 'application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8',
+			},
+		});
+
+		if (!response.ok) {
+			if (response.status === 404) {
+				throw new PackageNotFoundError(name, registry);
+			}
+			throw new FetchError(url, response.status, response.statusText);
+		}
+
+		return response.json();
 	});
 
-	if (!response.ok) {
-		if (response.status === 404) {
-			throw new PackageNotFoundError(name, registry);
-		}
-		throw new FetchError(url, response.status, response.statusText);
-	}
-
-	const json = await response.json();
 	return v.parse(abbreviatedPackumentSchema, json);
 }

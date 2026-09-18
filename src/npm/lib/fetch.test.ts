@@ -32,6 +32,22 @@ const sha512 = async (data: Uint8Array<ArrayBuffer>): Promise<string> => {
 	return `sha512-${btoa(String.fromCharCode(...digest))}`;
 };
 
+/** advances fake timers through retry delays until the promise settles */
+const settle = async <T>(promise: Promise<T>): Promise<T> => {
+	let settled = false;
+	promise.then(
+		() => (settled = true),
+		() => (settled = true),
+	);
+	// set by the callbacks above
+	// oxlint-disable-next-line no-unmodified-loop-condition
+	while (!settled) {
+		// oxlint-disable-next-line no-await-in-loop
+		await vi.advanceTimersByTimeAsync(100);
+	}
+	return promise;
+};
+
 /** serves each response in turn, repeating the last */
 const serve = (...responses: Array<() => Response>) => {
 	const fetch = vi.fn(async () => responses[Math.min(fetch.mock.calls.length - 1, responses.length - 1)]!());
@@ -46,6 +62,7 @@ const serve = (...responses: Array<() => Response>) => {
 describe('fetchTarballToVolume', () => {
 	afterEach(() => {
 		vi.unstubAllGlobals();
+		vi.useRealTimers();
 	});
 
 	it('extracts the package without its "package/" prefix', async () => {
@@ -105,14 +122,34 @@ describe('fetchTarballToVolume', () => {
 		).resolves.toBe(0);
 	});
 
-	it('rejects a tarball not matching its integrity', async () => {
+	it('rejects a tarball not matching its integrity without retrying', async () => {
 		const tarball = await makeTarball([['package/index.js', '']]);
-		serve(() => new Response(tarball));
+		const fetch = serve(() => new Response(tarball));
 
 		const other = await sha512(await makeTarball([['package/other.js', '']]));
 		await expect(extract(new Volume(), 'https://example.com/a.tgz', { integrity: other })).rejects.toThrow(
 			IntegrityError,
 		);
+		expect(fetch).toHaveBeenCalledTimes(1);
+	});
+
+	it('retries transient failures', async () => {
+		vi.useFakeTimers();
+		const tarball = await makeTarball([['package/index.js', 'hi']]);
+		const fetch = serve(
+			() => new Response(null, { status: 503 }),
+			() => new Response(tarball),
+		);
+
+		expect(await settle(extract(new Volume(), 'https://example.com/a.tgz'))).toBe(2);
+		expect(fetch).toHaveBeenCalledTimes(2);
+	});
+
+	it('does not retry missing tarballs', async () => {
+		const fetch = serve(() => new Response(null, { status: 404 }));
+
+		await expect(extract(new Volume(), 'https://example.com/a.tgz')).rejects.toThrow();
+		expect(fetch).toHaveBeenCalledTimes(1);
 	});
 
 	it('skips excluded files but counts them towards the size', async () => {
