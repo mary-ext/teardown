@@ -269,6 +269,16 @@ describe('pickVersion', () => {
 		it('treats empty string as latest', () => {
 			expect(pickVersion(versions, distTags, '')).toBe('2.0.0');
 		});
+
+		it('falls back to the highest stable version without a "latest" tag', () => {
+			expect(pickVersion(versions, { next: '3.0.0-beta.1' }, 'latest')).toBe('2.0.0');
+			expect(pickVersion({ '1.0.0-rc.1': manifest('1.0.0-rc.1') }, {}, 'latest')).toBe('1.0.0-rc.1');
+		});
+
+		it('ignores inherited properties', () => {
+			expect(pickVersion(versions, distTags, 'constructor')).toBeNull();
+			expect(pickVersion(versions, distTags, 'toString')).toBeNull();
+		});
 	});
 
 	describe('exact versions', () => {
@@ -626,6 +636,33 @@ describe('resolve', () => {
 
 			expect(result.roots[0]!.peers.size).toBe(0);
 			expect(result.roots[0]!.dependencies.size).toBe(0);
+		});
+
+		it('tolerates malformed dependency maps and missing "latest" tags', async () => {
+			const name = 'teardown-fixture-malformed';
+			vi.stubGlobal(
+				'fetch',
+				vi.fn(async () =>
+					Response.json({
+						name,
+						'dist-tags': {},
+						versions: {
+							'1.0.0': {
+								name,
+								version: '1.0.0',
+								dependencies: [],
+								peerDependencies: { a: null, b: { version: '1' } },
+								dist: { tarball: 'https://example.com/a.tgz' },
+							},
+						},
+					}),
+				),
+			);
+
+			const result = await resolve([name]);
+
+			expect(result.roots[0]!.version).toBe('1.0.0');
+			expect(result.roots[0]!.peers.size).toBe(0);
 		});
 
 		it('shares one request between concurrent lookups', async () => {

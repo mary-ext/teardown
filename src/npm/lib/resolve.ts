@@ -93,6 +93,25 @@ export function parseDependency(name: string, range: string, parentRegistry: Reg
 }
 
 /**
+ * uses `latest`, falling back to the highest stable version, then the highest prerelease.
+ */
+const getLatest = (
+	versions: Record<string, unknown>,
+	distTags: Record<string, string>,
+): string | undefined => {
+	if (Object.hasOwn(distTags, 'latest')) {
+		return distTags.latest;
+	}
+
+	const all = Object.keys(versions);
+	return (
+		semver.maxSatisfying(all, '*', { loose: true }) ??
+		semver.maxSatisfying(all, '*', { loose: true, includePrerelease: true }) ??
+		undefined
+	);
+};
+
+/**
  * selects the preferred version that satisfies a range.
  * @param versions versions by version string
  * @param distTags dist-tags by tag
@@ -104,29 +123,28 @@ export function pickVersion(
 	distTags: Record<string, string>,
 	range: string,
 ): string | null {
-	// empty range means latest
-	if (range === '') {
-		const latest = distTags.latest!;
-		return latest in versions ? latest : null;
+	if (range === '' || range === 'latest') {
+		const latest = getLatest(versions, distTags);
+		return latest !== undefined && Object.hasOwn(versions, latest) ? latest : null;
 	}
 
 	// check if range is a dist-tag
-	if (range in distTags) {
+	if (Object.hasOwn(distTags, range)) {
 		const taggedVersion = distTags[range]!;
-		return taggedVersion in versions ? taggedVersion : null;
+		return Object.hasOwn(versions, taggedVersion) ? taggedVersion : null;
 	}
 
 	// normalize loose version formats (v1.0.0, = 1.0.0)
 	const cleanedRange = semver.validRange(range, { loose: true }) ?? range;
 
 	// check if range is an exact version
-	if (versions[range]) {
+	if (Object.hasOwn(versions, range)) {
 		return range;
 	}
 
 	// check cleaned version (handles v1.0.0 -> 1.0.0)
 	const cleanedVersion = semver.clean(range, { loose: true });
-	if (cleanedVersion && versions[cleanedVersion]) {
+	if (cleanedVersion && Object.hasOwn(versions, cleanedVersion)) {
 		return cleanedVersion;
 	}
 
@@ -137,7 +155,7 @@ export function pickVersion(
 	// prefer 'latest' tag if it satisfies the range (pnpm behavior)
 	// publishers tag 'latest' intentionally, so respect that choice
 	const latestVersion = distTags.latest;
-	if (latestVersion && versions[latestVersion]) {
+	if (latestVersion !== undefined && Object.hasOwn(versions, latestVersion)) {
 		if (semver.satisfies(latestVersion, cleanedRange, satisfiesOptions)) {
 			return latestVersion;
 		}

@@ -70,6 +70,26 @@ const distSchema = v.object({
 });
 
 /**
+ * ignores malformed dependency ranges found in older releases and registry proxies.
+ */
+const dependencyMapSchema = v.pipe(
+	v.unknown(),
+	v.transform((input): Record<string, string> | undefined => {
+		if (typeof input !== 'object' || input === null || Array.isArray(input)) {
+			return undefined;
+		}
+
+		const ranges: Record<string, string> = {};
+		for (const [name, range] of Object.entries(input)) {
+			if (typeof range === 'string') {
+				ranges[name] = range;
+			}
+		}
+		return ranges;
+	}),
+);
+
+/**
  * bundled dependency names, or `true` for all dependencies. malformed values are ignored.
  */
 const bundleDependenciesSchema = v.fallback(
@@ -82,15 +102,10 @@ const bundleDependenciesSchema = v.fallback(
  * @see https://github.com/npm/registry/blob/main/docs/responses/package-metadata.md#abbreviated-metadata-format
  */
 export const abbreviatedManifestSchema = v.object({
-	...v.pick(packageJsonSchema, [
-		'name',
-		'version',
-		'deprecated',
-		'dependencies',
-		'optionalDependencies',
-		'peerDependencies',
-		'peerDependenciesMeta',
-	]).entries,
+	...v.pick(packageJsonSchema, ['name', 'version', 'deprecated', 'peerDependenciesMeta']).entries,
+	dependencies: v.optional(dependencyMapSchema),
+	optionalDependencies: v.optional(dependencyMapSchema),
+	peerDependencies: v.optional(dependencyMapSchema),
 	bundleDependencies: bundleDependenciesSchema,
 	// legacy spelling
 	bundledDependencies: bundleDependenciesSchema,
@@ -114,10 +129,7 @@ export const abbreviatedPackumentSchema = v.object({
 	name: v.string(),
 	// optional because some registries (e.g., JSR's npm mirror) may not include it
 	modified: v.optional(v.string()),
-	'dist-tags': v.pipe(
-		v.record(v.string(), v.string()),
-		v.check((tags) => 'latest' in tags, 'dist-tags must include "latest"'),
-	),
+	'dist-tags': v.record(v.string(), v.string()),
 	versions: v.record(v.string(), packumentVersionSchema),
 });
 
