@@ -7,7 +7,8 @@ import type { Registry } from '../../lib/package-name';
 import { InvalidManifestError, InvalidSpecifierError, NoMatchingVersionError } from './errors';
 import { applyPackageExtensions } from './package-extensions';
 import { packageExtensions } from './package-extensions-data';
-import { fetchPackument, reverseJsrName } from './registry';
+import { reverseJsrName } from './jsr-name';
+import { fetchPackument } from './registry';
 import { abbreviatedManifestSchema } from './types';
 import type {
 	AbbreviatedManifest,

@@ -2,7 +2,8 @@ import * as v from 'valibot';
 
 import type { Registry } from '../../lib/package-name';
 
-import { FetchError, InvalidSpecifierError, PackageNotFoundError } from './errors';
+import { FetchError, PackageNotFoundError } from './errors';
+import { transformJsrName } from './jsr-name';
 import { abbreviatedPackumentSchema, type AbbreviatedPackument } from './types';
 
 const NPM_REGISTRY = 'https://registry.npmjs.org';
@@ -13,40 +14,6 @@ const JSR_REGISTRY = 'https://npm.jsr.io';
  * key format: "registry:name" (e.g., "npm:react" or "jsr:@luca/flag")
  */
 const packumentCache = new Map<string, AbbreviatedPackument>();
-
-/**
- * transforms a JSR package name to the npm-compatible format.
- * `@scope/name` becomes `@jsr/scope__name`
- *
- * @param name the JSR package name (must be scoped)
- * @returns the transformed npm-compatible name
- */
-export function transformJsrName(name: string): string {
-	if (!name.startsWith('@')) {
-		throw new InvalidSpecifierError(name, 'JSR packages must be scoped');
-	}
-	// @scope/name -> @jsr/scope__name
-	const withoutAt = name.slice(1); // "scope/name"
-	const transformed = withoutAt.replace('/', '__'); // "scope__name"
-	return `@jsr/${transformed}`;
-}
-
-/**
- * reverses the JSR npm-compatible name back to the canonical format.
- * `@jsr/scope__name` becomes `@scope/name`
- *
- * @param name the npm-compatible JSR package name
- * @returns the canonical JSR package name
- */
-export function reverseJsrName(name: string): string {
-	if (!name.startsWith('@jsr/')) {
-		throw new InvalidSpecifierError(name, 'not a JSR npm-compatible name');
-	}
-	// @jsr/scope__name -> @scope/name
-	const withoutPrefix = name.slice(5); // "scope__name"
-	const restored = withoutPrefix.replace('__', '/'); // "scope/name"
-	return `@${restored}`;
-}
 
 /**
  * fetches the abbreviated packument from a registry.

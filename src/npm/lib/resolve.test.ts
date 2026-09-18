@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { reverseJsrName, transformJsrName } from './registry';
+import { reverseJsrName, transformJsrName } from './jsr-name';
 import { parseSpecifier, pickVersion, resolve } from './resolve';
 import type { PackumentVersion } from './types';
 
