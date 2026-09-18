@@ -276,8 +276,8 @@ async function resolvePackage(
 	if (manifest.peerDependencies) {
 		const peerMeta = manifest.peerDependenciesMeta ?? {};
 		for (const [peerName, peerRange] of Object.entries(manifest.peerDependencies)) {
-			// regular deps take precedence
-			if (peerName in deps) {
+			// the package itself and declared dependencies take precedence
+			if (peerName === name || peerName in deps) {
 				continue;
 			}
 

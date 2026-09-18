@@ -88,6 +88,8 @@ async function handleInit(id: number, packageSpec: string, options: InitOptions 
 
 		// include extension-added peers and peers also declared as regular dependencies
 		const peerDepNames = new Set([...Object.keys(manifest.peerDependencies ?? {}), ...mainPackage.peers]);
+		// resolution ignores packages listing themselves as peers
+		peerDepNames.delete(mainPackage.name);
 		const peerDependencies = [...peerDepNames];
 
 		const packages = buildInstalledPackages(layout, mainPackage.name, peerDepNames);

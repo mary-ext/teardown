@@ -128,7 +128,8 @@ export interface ResolvedPackage {
 	/** resolved dependencies (name -> ResolvedPackage), including auto-installed peers */
 	dependencies: Map<string, ResolvedPackage>;
 	/**
-	 * peer names, including optional peers, excluding names declared as regular dependencies
+	 * peer names, including optional peers, excluding the package's own name and names declared as
+	 * regular dependencies
 	 */
 	peers: Set<string>;
 }

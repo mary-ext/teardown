@@ -602,6 +602,32 @@ describe('resolve', () => {
 			vi.unstubAllGlobals();
 		});
 
+		it('ignores packages listing themselves as peers', async () => {
+			const name = 'teardown-fixture-self-peer';
+			vi.stubGlobal(
+				'fetch',
+				vi.fn(async () =>
+					Response.json({
+						name,
+						'dist-tags': { latest: '1.0.0' },
+						versions: {
+							'1.0.0': {
+								name,
+								version: '1.0.0',
+								peerDependencies: { [name]: '^1.0.0' },
+								dist: { tarball: 'https://example.com/a.tgz' },
+							},
+						},
+					}),
+				),
+			);
+
+			const result = await resolve([name]);
+
+			expect(result.roots[0]!.peers.size).toBe(0);
+			expect(result.roots[0]!.dependencies.size).toBe(0);
+		});
+
 		it('shares one request between concurrent lookups', async () => {
 			const name = 'teardown-fixture-shared';
 			const fetch = vi.fn(async () =>
