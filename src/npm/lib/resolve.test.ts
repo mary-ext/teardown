@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { reverseJsrName, transformJsrName } from './jsr-name';
 import { parseSpecifier, pickVersion, resolve } from './resolve';
@@ -518,6 +518,28 @@ describe('resolve', () => {
 
 			expect(result.roots).toHaveLength(1);
 			expect(result.roots[0]!.name).toBe('use-sync-external-store');
+		});
+	});
+
+	describe('fixture packuments', () => {
+		afterEach(() => {
+			vi.unstubAllGlobals();
+		});
+
+		it('shares one request between concurrent lookups', async () => {
+			const name = 'teardown-fixture-shared';
+			const fetch = vi.fn(async () =>
+				Response.json({
+					name,
+					'dist-tags': { latest: '1.0.0' },
+					versions: { '1.0.0': { name, version: '1.0.0', dist: { tarball: 'https://example.com/a.tgz' } } },
+				}),
+			);
+			vi.stubGlobal('fetch', fetch);
+
+			await resolve([name, `${name}@1.0.0`]);
+
+			expect(fetch).toHaveBeenCalledTimes(1);
 		});
 	});
 });

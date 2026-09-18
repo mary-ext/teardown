@@ -5,9 +5,9 @@ import { parsePackageSpecifier } from '../../lib/package-name';
 import type { Registry } from '../../lib/package-name';
 
 import { InvalidManifestError, InvalidSpecifierError, NoMatchingVersionError } from './errors';
+import { reverseJsrName } from './jsr-name';
 import { applyPackageExtensions } from './package-extensions';
 import { packageExtensions } from './package-extensions-data';
-import { reverseJsrName } from './jsr-name';
 import { fetchPackument } from './registry';
 import { abbreviatedManifestSchema } from './types';
 import type {

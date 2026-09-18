@@ -10,10 +10,9 @@ const NPM_REGISTRY = 'https://registry.npmjs.org';
 const JSR_REGISTRY = 'https://npm.jsr.io';
 
 /**
- * cache for packuments to avoid refetching during resolution.
- * key format: "registry:name" (e.g., "npm:react" or "jsr:@luca/flag")
+ * packuments by `registry:name`; promises let concurrent lookups share a fetch.
  */
-const packumentCache = new Map<string, AbbreviatedPackument>();
+const packumentCache = new Map<string, Promise<AbbreviatedPackument>>();
 
 /**
  * fetches the abbreviated packument from a registry.
@@ -24,16 +23,22 @@ const packumentCache = new Map<string, AbbreviatedPackument>();
  * @returns the abbreviated packument with all versions
  * @throws if the package doesn't exist, network fails, or response is invalid
  */
-export async function fetchPackument(
-	name: string,
-	registry: Registry = 'npm',
-): Promise<AbbreviatedPackument> {
+export function fetchPackument(name: string, registry: Registry = 'npm'): Promise<AbbreviatedPackument> {
 	const cacheKey = `${registry}:${name}`;
-	const cached = packumentCache.get(cacheKey);
-	if (cached) {
-		return cached;
+
+	let promise = packumentCache.get(cacheKey);
+	if (promise === undefined) {
+		promise = loadPackument(name, registry);
+		packumentCache.set(cacheKey, promise);
+
+		// allow later lookups to try again
+		promise.catch(() => packumentCache.delete(cacheKey));
 	}
 
+	return promise;
+}
+
+async function loadPackument(name: string, registry: Registry): Promise<AbbreviatedPackument> {
 	let registryUrl: string;
 	let fetchName: string;
 
@@ -66,7 +71,5 @@ export async function fetchPackument(
 	}
 
 	const json = await response.json();
-	const packument = v.parse(abbreviatedPackumentSchema, json);
-	packumentCache.set(cacheKey, packument);
-	return packument;
+	return v.parse(abbreviatedPackumentSchema, json);
 }
