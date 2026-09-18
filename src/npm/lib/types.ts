@@ -114,12 +114,6 @@ export const abbreviatedManifestSchema = v.object({
 
 export type AbbreviatedManifest = v.InferOutput<typeof abbreviatedManifestSchema>;
 
-const packumentVersionSchema = v.looseObject({
-	deprecated: v.optional(v.unknown()),
-});
-
-export type PackumentVersion = v.InferOutput<typeof packumentVersionSchema>;
-
 /**
  * abbreviated packument - minimal metadata for package resolution.
  * returned when requesting with Accept: application/vnd.npm.install-v1+json
@@ -130,7 +124,11 @@ export const abbreviatedPackumentSchema = v.object({
 	// optional because some registries (e.g., JSR's npm mirror) may not include it
 	modified: v.optional(v.string()),
 	'dist-tags': v.record(v.string(), v.string()),
-	versions: v.record(v.string(), packumentVersionSchema),
+	// avoid validating and copying every version; resolution parses the selected manifest
+	versions: v.custom<Record<string, unknown>>(
+		(input) => typeof input === 'object' && input !== null && !Array.isArray(input),
+		'versions must be an object',
+	),
 });
 
 export type AbbreviatedPackument = v.InferOutput<typeof abbreviatedPackumentSchema>;

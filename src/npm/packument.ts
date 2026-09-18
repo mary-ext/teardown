@@ -4,7 +4,6 @@ import type { Registry } from '../lib/package-name';
 
 import { fetchPackument } from './lib/registry';
 import { pickVersion } from './lib/resolve';
-import type { PackumentVersion } from './lib/types';
 
 /**
  * resolved packument-level metadata for a package.
@@ -16,7 +15,8 @@ import type { PackumentVersion } from './lib/types';
 export interface PackageManifest {
 	registry: Registry;
 	name: string;
-	versions: Record<string, PackumentVersion>;
+	/** unvalidated version entries by version */
+	versions: Record<string, unknown>;
 	distTags: Record<string, string>;
 	/** all available versions, sorted newest first */
 	availableVersions: string[];

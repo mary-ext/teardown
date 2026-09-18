@@ -2,11 +2,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { reverseJsrName, transformJsrName } from './jsr-name';
 import { parseDependency, parseSpecifier, pickVersion, resolve } from './resolve';
-import type { PackumentVersion } from './types';
 
 // #region test helpers
 
-function manifest(version: string, opts: { deprecated?: string } = {}): PackumentVersion {
+function manifest(version: string, opts: { deprecated?: string } = {}): unknown {
 	return {
 		name: 'test',
 		version,

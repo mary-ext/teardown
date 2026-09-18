@@ -1,3 +1,4 @@
+import { partition } from '@mary/array-fns';
 import * as semver from 'semver';
 import * as v from 'valibot';
 
@@ -10,13 +11,7 @@ import { applyPackageExtensions } from './package-extensions';
 import { packageExtensions } from './package-extensions-data';
 import { fetchPackument } from './registry';
 import { abbreviatedManifestSchema } from './types';
-import type {
-	AbbreviatedManifest,
-	PackageSpecifier,
-	PackumentVersion,
-	ResolvedPackage,
-	ResolutionResult,
-} from './types';
+import type { AbbreviatedManifest, PackageSpecifier, ResolvedPackage, ResolutionResult } from './types';
 
 /**
  * parses a package specifier string into name, range, and registry.
@@ -92,6 +87,10 @@ export function parseDependency(name: string, range: string, parentRegistry: Reg
 	return { name, range, registry: 'npm' };
 }
 
+const isDeprecated = (entry: unknown): boolean => {
+	return typeof entry === 'object' && entry !== null && 'deprecated' in entry && !!entry.deprecated;
+};
+
 /**
  * uses `latest`, falling back to the highest stable version, then the highest prerelease.
  */
@@ -113,13 +112,13 @@ const getLatest = (
 
 /**
  * selects the preferred version that satisfies a range.
- * @param versions versions by version string
+ * @param versions version entries by version string
  * @param distTags dist-tags by tag
  * @param range version range or dist-tag
  * @returns the selected version, or null when none match
  */
 export function pickVersion(
-	versions: Record<string, PackumentVersion>,
+	versions: Record<string, unknown>,
 	distTags: Record<string, string>,
 	range: string,
 ): string | null {
@@ -134,9 +133,6 @@ export function pickVersion(
 		return Object.hasOwn(versions, taggedVersion) ? taggedVersion : null;
 	}
 
-	// normalize loose version formats (v1.0.0, = 1.0.0)
-	const cleanedRange = semver.validRange(range, { loose: true }) ?? range;
-
 	// check if range is an exact version
 	if (Object.hasOwn(versions, range)) {
 		return range;
@@ -148,40 +144,32 @@ export function pickVersion(
 		return cleanedVersion;
 	}
 
-	// for wildcard ranges, use loose mode to include prereleases
-	const isWildcard = range === '*' || range === 'x' || range === '';
-	const satisfiesOptions = { loose: true, includePrerelease: isWildcard };
+	// wildcard ranges include prereleases
+	const options = { loose: true, includePrerelease: range === '*' || range === 'x' };
+
+	// reuse the parsed range across versions; semver requires matching options to reuse it
+	let parsed: semver.Range;
+	try {
+		parsed = new semver.Range(range, options);
+	} catch {
+		return null;
+	}
 
 	// prefer 'latest' tag if it satisfies the range (pnpm behavior)
 	// publishers tag 'latest' intentionally, so respect that choice
 	const latestVersion = distTags.latest;
-	if (latestVersion !== undefined && Object.hasOwn(versions, latestVersion)) {
-		if (semver.satisfies(latestVersion, cleanedRange, satisfiesOptions)) {
-			return latestVersion;
-		}
+	if (latestVersion !== undefined && Object.hasOwn(versions, latestVersion) && parsed.test(latestVersion)) {
+		return latestVersion;
 	}
 
-	// find all versions satisfying the range
-	const validVersions = Object.keys(versions)
-		.filter((v) => semver.satisfies(v, cleanedRange, satisfiesOptions))
-		// oxlint-disable-next-line unicorn/no-array-sort
-		.sort(semver.rcompare);
-
-	if (validVersions.length === 0) {
-		return null;
-	}
-
-	// prefer non-deprecated versions (pnpm behavior)
-	const nonDeprecated = validVersions.find((v) => !versions[v]!.deprecated);
-	if (nonDeprecated !== undefined) {
-		return nonDeprecated;
-	}
-
-	// fall back to deprecated if no alternatives
-	return validVersions[0]!;
+	// highest satisfying version, preferring non-deprecated versions (pnpm behavior)
+	const [deprecated, current] = partition(Object.keys(versions), (version) =>
+		isDeprecated(versions[version]),
+	);
+	return semver.maxSatisfying(current, parsed, options) ?? semver.maxSatisfying(deprecated, parsed, options);
 }
 
-const parseManifest = (entry: PackumentVersion, name: string, version: string): AbbreviatedManifest => {
+const parseManifest = (entry: unknown, name: string, version: string): AbbreviatedManifest => {
 	const result = v.safeParse(abbreviatedManifestSchema, entry);
 	if (!result.success) {
 		throw new InvalidManifestError(name, version, result.issues[0].message);
@@ -228,6 +216,8 @@ export interface ResolvedEdge {
 interface ResolutionContext {
 	/** all resolved packages by "registry:name@version" key for deduping */
 	resolved: Map<string, ResolvedPackage>;
+	/** picked versions by "registry:name@range" key */
+	picked: Map<string, string | null>;
 	/** whether required peer dependencies are auto-installed */
 	installPeers: boolean;
 	onResolve: ResolveOptions['onResolve'];
@@ -257,15 +247,24 @@ async function resolvePackage(
 	ctx: ResolutionContext,
 ): Promise<ResolvedPackage> {
 	const packument = await fetchPackument(name, registry);
-	const version = pickVersion(packument.versions, packument['dist-tags'], range);
+
+	let version: string | null;
+	{
+		const pickKey = `${registry}:${name}@${range}`;
+		const picked = ctx.picked.get(pickKey);
+		if (picked !== undefined) {
+			version = picked;
+		} else {
+			version = pickVersion(packument.versions, packument['dist-tags'], range);
+			ctx.picked.set(pickKey, version);
+		}
+	}
 
 	if (version === null) {
 		throw new NoMatchingVersionError(name, range);
 	}
 
-	const parsed = parseManifest(packument.versions[version]!, name, version);
-
-	const key = `${registry}:${name}@${parsed.version}`;
+	const key = `${registry}:${name}@${version}`;
 
 	// early registration allows deduplication to terminate dependency cycles
 	const existing = ctx.resolved.get(key);
@@ -274,6 +273,7 @@ async function resolvePackage(
 		return existing;
 	}
 
+	const parsed = parseManifest(packument.versions[version], name, version);
 	const manifest = applyPackageExtensions(parsed, packageExtensions);
 
 	const resolved: ResolvedPackage = {
@@ -351,6 +351,7 @@ async function resolvePackage(
 export async function resolve(specifiers: string[], options: ResolveOptions = {}): Promise<ResolutionResult> {
 	const ctx: ResolutionContext = {
 		resolved: new Map(),
+		picked: new Map(),
 		installPeers: options.installPeers ?? true,
 		onResolve: options.onResolve,
 	};
