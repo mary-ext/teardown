@@ -130,6 +130,7 @@ export async function fetchTarballToVolume(
 
 	// duplicate paths count only the last entry's size
 	const sizes = new Map<string, number>();
+	const createdDirs = new Set<string>();
 
 	for await (const entry of untar(decompressed)) {
 		// skip directories
@@ -155,7 +156,10 @@ export async function fetchTarballToVolume(
 
 		// ensure parent directories exist
 		const parentDir = fullPath.slice(0, fullPath.lastIndexOf('/'));
-		volume.mkdirSync(parentDir, { recursive: true });
+		if (!createdDirs.has(parentDir)) {
+			volume.mkdirSync(parentDir, { recursive: true });
+			createdDirs.add(parentDir);
+		}
 
 		volume.writeFileSync(fullPath, content);
 	}
