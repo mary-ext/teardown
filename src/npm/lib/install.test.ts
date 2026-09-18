@@ -62,18 +62,13 @@ describe('install', () => {
 		).toMatch(/^6\./);
 	});
 
-	it('skips auto-installed peers that a dependent provides', async () => {
-		// root react 17 replaces the auto-installed react 18 fallback
+	it('links peers requested at the root without resolving fallbacks', async () => {
 		const volume = new Volume();
 		const { resolution, layout } = await install(['react@17.0.2', 'use-sync-external-store@1.2.0'], volume);
 
-		const fallback = [...resolution.packages.values()].find(
-			(pkg) => pkg.name === 'react' && pkg.version !== '17.0.2',
-		);
-		expect(fallback).toBeDefined();
+		expect([...resolution.packages.values()].filter((pkg) => pkg.name === 'react')).toHaveLength(1);
 
 		const stored = volume.readdirSync('/node_modules/.pnpm').map(String);
-		expect(stored).not.toContain(`react@${fallback!.version}`);
 		expect(stored).toContain('use-sync-external-store@1.2.0(react@17.0.2)');
 		expect([...layout.entries.keys()].filter((id) => id.startsWith('react@'))).toEqual(['react@17.0.2']);
 	});

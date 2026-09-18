@@ -604,6 +604,13 @@ describe('resolve', () => {
 			expect(result.roots).toHaveLength(1);
 			expect(result.roots[0]!.name).toBe('use-sync-external-store');
 		});
+
+		it('skips fallbacks for peers requested at the root', async () => {
+			const result = await resolve(['react@17.0.2', 'use-sync-external-store@1.2.0']);
+
+			expect([...result.packages.values()].filter((pkg) => pkg.name === 'react')).toHaveLength(1);
+			expect(result.roots[1]!.dependencies.has('react')).toBe(false);
+		});
 	});
 
 	describe('fixture packuments', () => {

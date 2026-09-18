@@ -218,6 +218,8 @@ interface ResolutionContext {
 	resolved: Map<string, ResolvedPackage>;
 	/** picked versions by "registry:name@range" key */
 	picked: Map<string, string | null>;
+	/** names requested at the root, which provide peers to every package */
+	rootNames: Set<string>;
 	/** whether required peer dependencies are auto-installed */
 	installPeers: boolean;
 	onResolve: ResolveOptions['onResolve'];
@@ -318,7 +320,8 @@ async function resolvePackage(
 
 			resolved.peers.set(peerName, peerRange);
 
-			if (ctx.installPeers && peerMeta[peerName]?.optional !== true) {
+			// roots provide peers to every package, so their fallbacks would go unused
+			if (ctx.installPeers && peerMeta[peerName]?.optional !== true && !ctx.rootNames.has(peerName)) {
 				depsToResolve.push([peerName, peerRange, true]);
 			}
 		}
@@ -349,14 +352,15 @@ async function resolvePackage(
  * @returns the full resolution result with all packages
  */
 export async function resolve(specifiers: string[], options: ResolveOptions = {}): Promise<ResolutionResult> {
+	const parsedSpecs = specifiers.map(parseSpecifier);
+
 	const ctx: ResolutionContext = {
 		resolved: new Map(),
 		picked: new Map(),
+		rootNames: new Set(parsedSpecs.map((spec) => spec.name)),
 		installPeers: options.installPeers ?? true,
 		onResolve: options.onResolve,
 	};
-
-	const parsedSpecs = specifiers.map(parseSpecifier);
 
 	const roots = await Promise.all(
 		parsedSpecs.map(({ name, range, registry }) =>
