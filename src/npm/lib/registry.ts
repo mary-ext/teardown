@@ -61,8 +61,10 @@ async function loadPackument(name: string, registry: Registry): Promise<Abbrevia
 		const response = await fetch(url, {
 			headers: {
 				// request abbreviated format (corgi) for smaller payloads
-				Accept: 'application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8',
+				Accept: 'application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8, */*',
 			},
+			// prioritize metadata over tarballs to unblock resolution
+			priority: 'high',
 		});
 
 		if (!response.ok) {

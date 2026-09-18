@@ -154,7 +154,7 @@ const toPackagePath = (name: string): string | null => {
 };
 
 const extractTarball = async (volume: Volume, { url, integrity, destPath, exclude }: TarballOptions) => {
-	const response = await fetch(url);
+	const response = await fetch(url, { priority: 'low' });
 	if (!response.ok) {
 		throw new FetchError(url, response.status, response.statusText);
 	}
