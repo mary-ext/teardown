@@ -1,4 +1,7 @@
-import * as semver from 'semver';
+import { parseRange, testRange } from '../../lib/semver/range';
+import type { Range } from '../../lib/semver/range';
+import { compareVersions, parseVersion } from '../../lib/semver/version';
+import type { Version } from '../../lib/semver/version';
 
 import { transformJsrName } from './jsr-name';
 import type { IsolatedResult, ResolvedPackage, StoreEntry } from './types';
@@ -141,20 +144,39 @@ const selectPeerProviders = (packages: ResolvedPackage[]): Map<string, ResolvedP
 		([name]) => name,
 	);
 
+	const options = { loose: true, includePrerelease: true };
 	const providers = new Map<string, ResolvedPackage>();
 	for (const [name, peers] of fallbackRanges) {
-		const ranges = [...new Set(peers.map(([, range]) => range))];
+		const ranges: Range[] = [];
+		for (const range of new Set(peers.map(([, range]) => range))) {
+			const parsed = parseRange(range, options);
+			if (parsed === null) {
+				ranges.length = 0;
+				break;
+			}
+			ranges.push(parsed);
+		}
+		if (ranges.length === 0) {
+			continue;
+		}
 
-		const best = (versionsByName.get(name) ?? [])
-			.filter(
-				(pkg) =>
-					pkg.registry === 'npm' &&
-					ranges.every((range) =>
-						semver.satisfies(pkg.version, range, { loose: true, includePrerelease: true }),
-					),
-			)
-			.toSorted((a, b) => semver.rcompare(a.version, b.version, true))
-			.at(0);
+		// keep the first provider on equal versions
+		let best: ResolvedPackage | undefined;
+		let bestVersion: Version | undefined;
+		for (const pkg of versionsByName.get(name) ?? []) {
+			if (pkg.registry !== 'npm') {
+				continue;
+			}
+			const version = parseVersion(pkg.version, options);
+			if (
+				version !== null &&
+				(bestVersion === undefined || compareVersions(version, bestVersion) > 0) &&
+				ranges.every((range) => testRange(range, version))
+			) {
+				best = pkg;
+				bestVersion = version;
+			}
+		}
 
 		if (best !== undefined) {
 			providers.set(name, best);

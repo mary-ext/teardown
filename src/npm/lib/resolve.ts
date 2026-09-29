@@ -1,9 +1,11 @@
 import { partition } from '@mary/array-fns';
-import * as semver from 'semver';
 import * as v from 'valibot';
 
 import { parsePackageSpecifier } from '../../lib/package-name';
 import type { Registry } from '../../lib/package-name';
+import { maxSatisfying, parseRange, satisfies } from '../../lib/semver/range';
+import type { Range } from '../../lib/semver/range';
+import { cleanVersion } from '../../lib/semver/version';
 
 import { InvalidManifestError, InvalidSpecifierError, NoMatchingVersionError } from './errors';
 import { reverseJsrName } from './jsr-name';
@@ -91,6 +93,9 @@ const isDeprecated = (entry: unknown): boolean => {
 	return typeof entry === 'object' && entry !== null && 'deprecated' in entry && !!entry.deprecated;
 };
 
+const ANY_STABLE: Range = parseRange('*', { loose: true })!;
+const ANY: Range = parseRange('*', { loose: true, includePrerelease: true })!;
+
 /**
  * uses `latest`, falling back to the highest stable version, then the highest prerelease.
  */
@@ -103,11 +108,7 @@ const getLatest = (
 	}
 
 	const all = Object.keys(versions);
-	return (
-		semver.maxSatisfying(all, '*', { loose: true }) ??
-		semver.maxSatisfying(all, '*', { loose: true, includePrerelease: true }) ??
-		undefined
-	);
+	return maxSatisfying(all, ANY_STABLE) ?? maxSatisfying(all, ANY) ?? undefined;
 };
 
 /**
@@ -139,26 +140,25 @@ export function pickVersion(
 	}
 
 	// check cleaned version (handles v1.0.0 -> 1.0.0)
-	const cleanedVersion = semver.clean(range, { loose: true });
+	const cleanedVersion = cleanVersion(range, { loose: true });
 	if (cleanedVersion && Object.hasOwn(versions, cleanedVersion)) {
 		return cleanedVersion;
 	}
 
 	// wildcard ranges include prereleases
-	const options = { loose: true, includePrerelease: range === '*' || range === 'x' };
-
-	// reuse the parsed range across versions; semver requires matching options to reuse it
-	let parsed: semver.Range;
-	try {
-		parsed = new semver.Range(range, options);
-	} catch {
+	const parsed = parseRange(range, { loose: true, includePrerelease: range === '*' || range === 'x' });
+	if (parsed === null) {
 		return null;
 	}
 
 	// prefer 'latest' tag if it satisfies the range (pnpm behavior)
 	// publishers tag 'latest' intentionally, so respect that choice
 	const latestVersion = distTags.latest;
-	if (latestVersion !== undefined && Object.hasOwn(versions, latestVersion) && parsed.test(latestVersion)) {
+	if (
+		latestVersion !== undefined &&
+		Object.hasOwn(versions, latestVersion) &&
+		satisfies(latestVersion, parsed)
+	) {
 		return latestVersion;
 	}
 
@@ -166,7 +166,7 @@ export function pickVersion(
 	const [deprecated, current] = partition(Object.keys(versions), (version) =>
 		isDeprecated(versions[version]),
 	);
-	return semver.maxSatisfying(current, parsed, options) ?? semver.maxSatisfying(deprecated, parsed, options);
+	return maxSatisfying(current, parsed) ?? maxSatisfying(deprecated, parsed);
 }
 
 const parseManifest = (entry: unknown, name: string, version: string): AbbreviatedManifest => {

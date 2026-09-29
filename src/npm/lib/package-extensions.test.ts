@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { parseRange } from '../../lib/semver/range';
+
 import { applyPackageExtensions, type PackageExtension } from './package-extensions';
 import { packageExtensions } from './package-extensions-data';
 import type { AbbreviatedManifest } from './types';
@@ -91,11 +93,10 @@ describe('bundled package extensions', () => {
 		}
 	});
 
-	it('has valid ranges', async () => {
-		const semver = await import('semver');
+	it('has valid ranges', () => {
 		for (const rules of Object.values(packageExtensions)) {
 			for (const rule of rules) {
-				expect(semver.validRange(rule.range), rule.range).not.toBeNull();
+				expect(parseRange(rule.range), rule.range).not.toBeNull();
 			}
 		}
 	});

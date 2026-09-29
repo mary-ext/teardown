@@ -1,6 +1,5 @@
-import * as semver from 'semver';
-
 import type { Registry } from '../lib/package-name';
+import { rsortVersions } from '../lib/semver/version';
 
 import { fetchPackument } from './lib/registry';
 import { pickVersion } from './lib/resolve';
@@ -28,7 +27,7 @@ export interface PackageManifest {
  */
 export async function fetchPackageManifest(registry: Registry, name: string): Promise<PackageManifest> {
 	const packument = await fetchPackument(name, registry);
-	const availableVersions = Object.keys(packument.versions).toSorted(semver.rcompare);
+	const availableVersions = rsortVersions(Object.keys(packument.versions), { loose: true });
 
 	return {
 		registry,

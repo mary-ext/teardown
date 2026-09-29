@@ -1,4 +1,4 @@
-import * as semver from 'semver';
+import { parseRange, satisfies } from '../../lib/semver/range';
 
 import type { AbbreviatedManifest } from './types';
 
@@ -21,7 +21,11 @@ const orUndefined = <T extends object>(record: T): T | undefined => {
 };
 
 const matches = (version: string, range: string): boolean => {
-	return range === '*' || semver.satisfies(version, range, { includePrerelease: true });
+	if (range === '*') {
+		return true;
+	}
+	const parsed = parseRange(range, { includePrerelease: true });
+	return parsed !== null && satisfies(version, parsed);
 };
 
 /**
