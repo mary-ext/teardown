@@ -9,6 +9,7 @@ allowBuilds:
   sharp: false
   workerd: true
 
+minimumReleaseAgeExcludePrune: true
 minimumReleaseAgeExclude:
   - '@rolldown/*'
   - '@jsr/mary__*'
