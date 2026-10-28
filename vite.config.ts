@@ -1,9 +1,10 @@
+import { cloudflare } from '@cloudflare/vite-plugin';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 import solid from 'vite-plugin-solid';
 
 export default defineConfig({
-	plugins: [tailwindcss(), solid()],
+	plugins: [tailwindcss(), solid(), cloudflare()],
 	optimizeDeps: {
 		exclude: ['@rolldown/browser', '@bokuweb/zstd-wasm'],
 	},

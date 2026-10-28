@@ -6,6 +6,7 @@
 	"scripts": {
 		"dev": "vite",
 		"build": "oxlint && vite build",
+		"deploy": "cf deploy",
 		"preview": "vite preview",
 		"fmt": "oxfmt",
 		"generate:extensions": "node scripts/generate-package-extensions.ts && oxfmt src/npm/lib/package-extensions-data.ts",
@@ -27,10 +28,12 @@
 		"valibot": "^1.5.0"
 	},
 	"devDependencies": {
+		"@cloudflare/vite-plugin": "2.0.0-beta.v.5",
 		"@nubjs/extensions": "^1.0.38",
 		"@oxc-project/types": "^0.156.0",
 		"@tailwindcss/vite": "^4.3.3",
 		"@types/node": "^26.6.5",
+		"cf": "1.0.0-beta.23",
 		"oxfmt": "^0.75.0",
 		"oxlint": "^1.90.0",
 		"oxlint-tsgolint": "^7.0.2005",
@@ -38,7 +41,6 @@
 		"typescript": "~7.0.2",
 		"vite": "^8.3.5",
 		"vite-plugin-solid": "^2.11.14",
-		"vitest": "^5.0.5",
-		"wrangler": "^4.153.0"
+		"vitest": "^5.0.5"
 	}
 }

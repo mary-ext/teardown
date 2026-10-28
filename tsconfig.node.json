@@ -22,5 +22,5 @@
 		"noFallthroughCasesInSwitch": true,
 		"noUncheckedSideEffectImports": true
 	},
-	"include": ["scripts", "vite.config.ts"]
+	"include": ["scripts", "vite.config.ts", "cloudflare.config.ts"]
 }
