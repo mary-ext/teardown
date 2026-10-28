@@ -100,6 +100,13 @@ const Tooltip = (props: TooltipProps) => {
 		scheduleHide();
 	};
 
+	const handleKeyDown = (ev: KeyboardEvent) => {
+		if (ev.key === 'Escape') {
+			clearTimeouts();
+			setVisible(false);
+		}
+	};
+
 	// cleanup timeouts on unmount
 	onCleanup(clearTimeouts);
 
@@ -151,13 +158,6 @@ const Tooltip = (props: TooltipProps) => {
 
 								onCleanup(autoUpdate($trigger, el, updatePosition));
 							});
-
-							const handleKeyDown = (ev: KeyboardEvent) => {
-								if (ev.key === 'Escape') {
-									clearTimeouts();
-									setVisible(false);
-								}
-							};
 
 							document.addEventListener('keydown', handleKeyDown);
 

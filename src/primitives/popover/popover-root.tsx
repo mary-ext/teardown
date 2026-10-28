@@ -59,15 +59,15 @@ const PopoverRoot = (props: PopoverRootProps) => {
 
 	onCleanup(clearTimeouts);
 
+	const updateState = (newValue: boolean) => {
+		if (props.open === undefined) {
+			setInternalOpen(newValue);
+		}
+		props.onOpenChange?.(newValue);
+	};
+
 	const setOpen = (value: boolean, eventType?: string) => {
 		clearTimeouts();
-
-		const updateState = (newValue: boolean) => {
-			if (props.open === undefined) {
-				setInternalOpen(newValue);
-			}
-			props.onOpenChange?.(newValue);
-		};
 
 		if (eventType === 'pointerenter') {
 			// opening on hover - apply enter delay

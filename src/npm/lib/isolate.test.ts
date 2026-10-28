@@ -231,26 +231,19 @@ describe('isolate', () => {
 
 		it('keeps peer contexts apart through cycles', () => {
 			// a -> b -> a; a -> c requires an ancestor-provided react
-			const make = (order: 'b-first' | 'c-first') => {
+			for (const order of [
+				['b', 'c'],
+				['c', 'b'],
+			]) {
 				const a = pkg('a');
-				const b = pkg('b', [a]);
-				const c = pkg('c', [], ['react']);
-				a.dependencies = new Map(
-					order === 'b-first'
-						? [
-								['b', b],
-								['c', c],
-							]
-						: [
-								['c', c],
-								['b', b],
-							],
-				);
-				return pkg('app', [pkg('x', [pkg('react@17.0.0'), a]), pkg('y', [pkg('react@18.0.0'), a])]);
-			};
+				const deps = new Map([
+					['b', pkg('b', [a])],
+					['c', pkg('c', [], ['react'])],
+				]);
+				a.dependencies = new Map(order.map((name) => [name, deps.get(name)!]));
 
-			for (const order of ['b-first', 'c-first'] as const) {
-				const lines = describeLayout(isolate([make(order)]));
+				const app = pkg('app', [pkg('x', [pkg('react@17.0.0'), a]), pkg('y', [pkg('react@18.0.0'), a])]);
+				const lines = describeLayout(isolate([app]));
 
 				expect(lines.filter((line) => /^[ab]@/.test(line))).toEqual([
 					'a@1.0.0(react@17.0.0): b -> b@1.0.0(react@17.0.0), c -> c@1.0.0(react@17.0.0)',

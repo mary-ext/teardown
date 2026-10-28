@@ -7,38 +7,38 @@
 		"dev": "vite",
 		"build": "oxlint && vite build",
 		"preview": "vite preview",
-		"format": "oxfmt",
+		"fmt": "oxfmt",
 		"generate:extensions": "node scripts/generate-package-extensions.ts && oxfmt src/npm/lib/package-extensions-data.ts",
 		"lint": "oxlint",
 		"test": "vitest"
 	},
 	"dependencies": {
-		"@atcute/uint8array": "^1.1.5",
+		"@atcute/uint8array": "^1.2.1",
 		"@bokuweb/zstd-wasm": "^0.0.27",
 		"@floating-ui/dom": "^1.8.0",
 		"@mary/array-fns": "jsr:^0.1.6",
 		"@mary/tar": "jsr:^0.4.0",
 		"@oomfware/semver": "^0.1.0",
-		"@rolldown/browser": "^1.2.7",
+		"@rolldown/browser": "^1.2.15",
 		"clsx": "^2.1.1",
 		"dequal": "^2.0.3",
-		"memfs": "^4.71.0",
-		"solid-js": "^1.9.15",
-		"valibot": "^1.4.2"
+		"memfs": "^4.80.0",
+		"solid-js": "^1.9.17",
+		"valibot": "^1.5.0"
 	},
 	"devDependencies": {
-		"@nubjs/extensions": "^1.0.6",
-		"@oxc-project/types": "^0.149.0",
+		"@nubjs/extensions": "^1.0.38",
+		"@oxc-project/types": "^0.156.0",
 		"@tailwindcss/vite": "^4.3.3",
-		"@types/node": "^26.5.0",
-		"oxfmt": "^0.67.0",
-		"oxlint": "^1.82.0",
-		"oxlint-tsgolint": "^7.0.2001",
+		"@types/node": "^26.6.5",
+		"oxfmt": "^0.75.0",
+		"oxlint": "^1.90.0",
+		"oxlint-tsgolint": "^7.0.2005",
 		"tailwindcss": "^4.3.3",
 		"typescript": "~7.0.2",
-		"vite": "^8.2.2",
+		"vite": "^8.3.5",
 		"vite-plugin-solid": "^2.11.14",
-		"vitest": "^5.0.0",
-		"wrangler": "^4.129.1"
+		"vitest": "^5.0.5",
+		"wrangler": "^4.153.0"
 	}
 }
