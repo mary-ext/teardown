@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  '@rolldown/browser>@napi-rs/wasm-runtime': 1.2.5
+
 importers:
 
   .:
@@ -563,12 +566,12 @@ packages:
   '@jsr/mary__tar@0.4.0':
     resolution: {integrity: sha512-VwDZ64+aBAhlI6MBl5HpaqQPh22OCI76b0APrBz7jvX+KG8I6cp2OgI3RPM64xR+MgvoSVg6TY0aU0c1Te8Xig==, tarball: https://npm.jsr.io/~/11/@jsr/mary__tar/0.4.0.tgz}
 
-  '@napi-rs/wasm-runtime@1.2.6':
-    resolution: {integrity: sha512-mRyDmEw9/fCDXCGfL1sbgIw/GUK0PVxRW4YwgPN61F3LQ+fSyoBFarJVzgGyhF6kRzEQZ0FejDqm4WLXSeqQmw==}
+  '@napi-rs/wasm-runtime@1.2.5':
+    resolution: {integrity: sha512-HshSvXzmBxNzqejd3k/KemgQ3hdREUYFRRrgxOZ+gPljDIsO2SDZrVZMd4Z/HsxudQbE62OVyVFE8z9BCurfjA==}
     engines: {node: ^20.19.0 || ^22.13.0 || >=23.5.0}
     peerDependencies:
-      '@emnapi/core': ^1.7.1 || 2.0.0-beta.2
-      '@emnapi/runtime': ^1.7.1 || 2.0.0-beta.2
+      '@emnapi/core': ^1.7.1 || ^2.0.0-alpha.4
+      '@emnapi/runtime': ^1.7.1 || ^2.0.0-alpha.4
 
   '@nubjs/extensions@1.0.38':
     resolution: {integrity: sha512-GjkivAgbSZNe1+fXs8AooYDo6HGA6pUupgSi//o3QqW1/Lfwt0LWNzZx3IkwSKzM58H+h/rebTUStDMeHTJQMw==}
@@ -2346,7 +2349,7 @@ snapshots:
 
   '@jsr/mary__tar@0.4.0': {}
 
-  '@napi-rs/wasm-runtime@1.2.6(@emnapi/core@2.0.0-alpha.5)(@emnapi/runtime@2.0.0-alpha.5)':
+  '@napi-rs/wasm-runtime@1.2.5(@emnapi/core@2.0.0-alpha.5)(@emnapi/runtime@2.0.0-alpha.5)':
     dependencies:
       '@emnapi/core': 2.0.0-alpha.5
       '@emnapi/runtime': 2.0.0-alpha.5
@@ -2553,7 +2556,7 @@ snapshots:
     dependencies:
       '@emnapi/core': 2.0.0-alpha.5
       '@emnapi/runtime': 2.0.0-alpha.5
-      '@napi-rs/wasm-runtime': 1.2.6(@emnapi/core@2.0.0-alpha.5)(@emnapi/runtime@2.0.0-alpha.5)
+      '@napi-rs/wasm-runtime': 1.2.5(@emnapi/core@2.0.0-alpha.5)(@emnapi/runtime@2.0.0-alpha.5)
 
   '@rolldown/pluginutils@1.0.1': {}
 

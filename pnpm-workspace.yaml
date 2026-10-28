@@ -9,6 +9,10 @@ allowBuilds:
   sharp: false
   workerd: true
 
+overrides:
+  # wasm-runtime 1.2.6 requires @emnapi/core 2.0.0-beta.2, but @rolldown/browser pins 2.0.0-alpha.5
+  '@rolldown/browser>@napi-rs/wasm-runtime': 1.2.5
+
 minimumReleaseAgeExcludePrune: true
 minimumReleaseAgeExclude:
   - '@rolldown/*'
