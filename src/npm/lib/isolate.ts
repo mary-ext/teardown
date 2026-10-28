@@ -1,7 +1,5 @@
-import { parseRange, testRange } from '../../lib/semver/range';
-import type { Range } from '../../lib/semver/range';
-import { compareVersions, parseVersion } from '../../lib/semver/version';
-import type { Version } from '../../lib/semver/version';
+import { compareVersions, parseRange, parseVersion, satisfies } from '@oomfware/semver';
+import type { Range, Version } from '@oomfware/semver';
 
 import { transformJsrName } from './jsr-name';
 import type { IsolatedResult, ResolvedPackage, StoreEntry } from './types';
@@ -171,7 +169,7 @@ const selectPeerProviders = (packages: ResolvedPackage[]): Map<string, ResolvedP
 			if (
 				version !== null &&
 				(bestVersion === undefined || compareVersions(version, bestVersion) > 0) &&
-				ranges.every((range) => testRange(range, version))
+				ranges.every((range) => satisfies(version, range))
 			) {
 				best = pkg;
 				bestVersion = version;

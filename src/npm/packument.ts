@@ -1,5 +1,6 @@
+import { rsortVersions } from '@oomfware/semver';
+
 import type { Registry } from '../lib/package-name';
-import { rsortVersions } from '../lib/semver/version';
 
 import { fetchPackument } from './lib/registry';
 import { pickVersion } from './lib/resolve';

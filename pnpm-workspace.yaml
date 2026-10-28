@@ -12,3 +12,4 @@ allowBuilds:
 minimumReleaseAgeExclude:
   - '@rolldown/*'
   - '@jsr/mary__*'
+  - '@oomfware/*'

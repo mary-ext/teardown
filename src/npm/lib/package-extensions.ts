@@ -1,4 +1,5 @@
-import { parseRange, satisfies } from '../../lib/semver/range';
+import { parseRange, parseVersion, satisfies } from '@oomfware/semver';
+import type { Version } from '@oomfware/semver';
 
 import type { AbbreviatedManifest } from './types';
 
@@ -20,9 +21,12 @@ const orUndefined = <T extends object>(record: T): T | undefined => {
 	return Object.keys(record).length > 0 ? record : undefined;
 };
 
-const matches = (version: string, range: string): boolean => {
+const matches = (version: Version | null, range: string): boolean => {
 	if (range === '*') {
 		return true;
+	}
+	if (version === null) {
+		return false;
 	}
 	const parsed = parseRange(range, { includePrerelease: true });
 	return parsed !== null && satisfies(version, parsed);
@@ -44,7 +48,8 @@ export const applyPackageExtensions = (
 		return manifest;
 	}
 
-	const matching = extensions[manifest.name]!.filter((rule) => matches(manifest.version, rule.range));
+	const version = parseVersion(manifest.version);
+	const matching = extensions[manifest.name]!.filter((rule) => matches(version, rule.range));
 	if (matching.length === 0) {
 		return manifest;
 	}

@@ -1,11 +1,10 @@
 import { partition } from '@mary/array-fns';
+import { cleanVersion, maxSatisfying, parseRange, parseVersion, satisfies } from '@oomfware/semver';
+import type { Range } from '@oomfware/semver';
 import * as v from 'valibot';
 
 import { parsePackageSpecifier } from '../../lib/package-name';
 import type { Registry } from '../../lib/package-name';
-import { maxSatisfying, parseRange, satisfies } from '../../lib/semver/range';
-import type { Range } from '../../lib/semver/range';
-import { cleanVersion } from '../../lib/semver/version';
 
 import { InvalidManifestError, InvalidSpecifierError, NoMatchingVersionError } from './errors';
 import { reverseJsrName } from './jsr-name';
@@ -154,12 +153,11 @@ export function pickVersion(
 	// prefer 'latest' tag if it satisfies the range (pnpm behavior)
 	// publishers tag 'latest' intentionally, so respect that choice
 	const latestVersion = distTags.latest;
-	if (
-		latestVersion !== undefined &&
-		Object.hasOwn(versions, latestVersion) &&
-		satisfies(latestVersion, parsed)
-	) {
-		return latestVersion;
+	if (latestVersion !== undefined && Object.hasOwn(versions, latestVersion)) {
+		const latest = parseVersion(latestVersion, parsed);
+		if (latest !== null && satisfies(latest, parsed)) {
+			return latestVersion;
+		}
 	}
 
 	// highest satisfying version, preferring non-deprecated versions (pnpm behavior)

@@ -1,6 +1,5 @@
+import { parseRange } from '@oomfware/semver';
 import { describe, expect, it } from 'vitest';
-
-import { parseRange } from '../../lib/semver/range';
 
 import { applyPackageExtensions, type PackageExtension } from './package-extensions';
 import { packageExtensions } from './package-extensions-data';

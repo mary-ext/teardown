@@ -23,6 +23,9 @@ importers:
       '@mary/tar':
         specifier: jsr:^0.4.0
         version: '@jsr/mary__tar@0.4.0'
+      '@oomfware/semver':
+        specifier: ^0.1.0
+        version: 0.1.0
       '@rolldown/browser':
         specifier: ^1.2.7
         version: 1.2.7
@@ -54,9 +57,6 @@ importers:
       '@types/node':
         specifier: ^26.5.0
         version: 26.5.0
-      '@types/semver':
-        specifier: ^7.8.0
-        version: 7.8.0
       oxfmt:
         specifier: ^0.67.0
         version: 0.67.0
@@ -66,9 +66,6 @@ importers:
       oxlint-tsgolint:
         specifier: ^7.0.2001
         version: 7.0.2001
-      semver:
-        specifier: ^7.8.5
-        version: 7.8.5
       tailwindcss:
         specifier: ^4.3.3
         version: 4.3.3
@@ -718,6 +715,9 @@ packages:
   '@nubjs/extensions@1.0.38':
     resolution: {integrity: sha512-GjkivAgbSZNe1+fXs8AooYDo6HGA6pUupgSi//o3QqW1/Lfwt0LWNzZx3IkwSKzM58H+h/rebTUStDMeHTJQMw==}
 
+  '@oomfware/semver@0.1.0':
+    resolution: {integrity: sha512-Mj3sk0sZZ7loXFFKe7C3JcA5ZdYHn89MyJ2AAr86IpAGv9xJs/tU5MiVwdBRuseH7izvxDDKpS4weDA8RvwmPA==}
+
   '@oxc-project/types@0.148.0':
     resolution: {integrity: sha512-Nm4s/jB+4FpFsPhWGEC4h7rzksesmtnMXomo6rCMcg/b8zLQuOziRgkCS1fxDCXOlJB/6Q8oABOZ/OP6RIPj9A==}
 
@@ -1237,9 +1237,6 @@ packages:
 
   '@types/node@26.5.0':
     resolution: {integrity: sha512-dVSGpriSoCgz8WnDNTuSSuSv1PC/ALXihO4ulRZt7Md8k9mlbdin3lGOcDE8SnWOgf513ByWlXd7BK4azmyg/A==}
-
-  '@types/semver@7.8.0':
-    resolution: {integrity: sha512-1mAINjtQCXXeLkJ9ehXkwOcBpqtLxiVtKhpUf83DdRNdQKV0iXZpaHYqRr7nj+wvxuJzoAmAwXI+sCNMv1CzLQ==}
 
   '@typescript/typescript-aix-ppc64@7.0.2':
     resolution: {integrity: sha512-MTKKkWB7p/0E9xi1d1tHtZ5PiLkGEMIq88pK2CubZjOsLtYTLqhgIgi6zepFa+9GHZ6h05NMCkQxGKiPXMxXtQ==}
@@ -2554,6 +2551,8 @@ snapshots:
 
   '@nubjs/extensions@1.0.38': {}
 
+  '@oomfware/semver@0.1.0': {}
+
   '@oxc-project/types@0.148.0': {}
 
   '@oxc-project/types@0.149.0': {}
@@ -2864,8 +2863,6 @@ snapshots:
   '@types/node@26.5.0':
     dependencies:
       undici-types: 8.9.0
-
-  '@types/semver@7.8.0': {}
 
   '@typescript/typescript-aix-ppc64@7.0.2':
     optional: true
