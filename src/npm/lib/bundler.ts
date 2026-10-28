@@ -38,6 +38,32 @@ const PRODUCTION_DEFINE: Record<string, string> = {
 	),
 	'import.meta.env': JSON.stringify(BUILD_ENV),
 	'import.meta.env.*': 'undefined',
+
+	// resolve framework flags to eliminate dev-only branches.
+
+	// @vitejs/plugin-vue defaults
+	__VUE_OPTIONS_API__: 'true',
+	__VUE_PROD_DEVTOOLS__: 'false',
+	__VUE_PROD_HYDRATION_MISMATCH_DETAILS__: 'false',
+
+	// vue-i18n defaults
+	__VUE_I18N_FULL_INSTALL__: 'true',
+	__VUE_I18N_LEGACY_API__: 'true',
+	__INTLIFY_PROD_DEVTOOLS__: 'false',
+	__INTLIFY_DROP_MESSAGE_COMPILER__: 'false',
+
+	// @quasar/vite-plugin client defaults
+	__QUASAR_SSR__: 'false',
+	__QUASAR_SSR_SERVER__: 'false',
+	__QUASAR_SSR_CLIENT__: 'false',
+	__QUASAR_SSR_PWA__: 'false',
+
+	// @angular/build AOT browser defaults
+	ngDevMode: 'false',
+	ngJitMode: 'false',
+	ngI18nClosureMode: 'false',
+	ngServerMode: 'false',
+	ngHmrMode: 'false',
 };
 
 /** source dialect a module should be parsed as. */
