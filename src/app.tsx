@@ -4,7 +4,6 @@ import * as v from 'valibot';
 
 import PackageResult from './components/package-result';
 import PackageSearchInput from './components/package-search-input';
-import { CentralExclamationTriangleSolid } from './icons/central';
 import {
 	LucideArrowDown,
 	LucideCircleAlert,
@@ -26,11 +25,6 @@ import { fetchPackageManifest } from './npm/packument';
 import Button from './primitives/button';
 import Tooltip from './primitives/tooltip';
 import { RECOMMENDATIONS } from './recommendations';
-
-const isSafari = (() => {
-	const ua = navigator.userAgent;
-	return /AppleWebKit/.test(ua) && !/Chrome|Chromium/.test(ua);
-})();
 
 function App() {
 	const [params, setParams] = useSearchParams({
@@ -108,17 +102,6 @@ function App() {
 					onChange={setQuery}
 					onSelect={(specifier) => setParams({ q: specifier })}
 				/>
-
-				{isSafari && (
-					<div class="flex gap-2 rounded-md border border-status-warning-border-1 bg-status-warning-background-1 px-3 py-1.75">
-						<CentralExclamationTriangleSolid class="size-5 shrink-0 text-status-warning-foreground-3" />
-
-						<div class="min-w-0 grow text-base-300 text-neutral-foreground-1">
-							<span class="font-semibold">Not compatible with Safari.</span> Sorry, not sure why it doesn't
-							work there. It seems to be Rolldown and WASI related.
-						</div>
-					</div>
-				)}
 
 				<Switch>
 					<Match when={manifest()} keyed>
